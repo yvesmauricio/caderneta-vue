@@ -35,7 +35,7 @@
             <line x1="12" y1="5" x2="12" y2="19" />
             <line x1="5" y1="12" x2="19" y2="12" />
           </svg>
-          Novo Fiado
+          Fiado
         </button>
       </div>
     </div>
@@ -53,8 +53,6 @@ const saudacao = ref('Olá! 👋')
 const dataBR = ref('')
 const totalAberto = ref(0)
 const totalVencido = ref(0)
-const qtdLojas = ref(0)
-const qtdClientes = ref(0)
 const vencimentos = ref([])
 
 const fmt = v => Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -205,6 +203,7 @@ defineExpose({ refresh })
 }
 
 .dash-action-btn {
+  grid-column: 1 / -1; /* Faz o botão ocupar as duas colunas */
   width: 100%;
   padding: 16px;
   border-radius: var(--r);
