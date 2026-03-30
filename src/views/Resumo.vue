@@ -2,7 +2,7 @@
   <div class="tela-resumo">
     <div class="topbar">
       <div></div>
-      <div class="topbar-title">📊 Resumo do Mês</div>
+      <div class="topbar-title">📊 Lista de </div>
       <div></div>
     </div>
 
@@ -273,7 +273,7 @@ async function carregar() {
   const porLoja = new Map()
   abertos.forEach(f => {
     if (!porLoja.has(f.lojaId)) {
-      porLoja.set(f.lojaId, { lojaId: f.lojaId, lojaNome: f.lojaNome, clientes: new Map(), colapsado: false })
+      porLoja.set(f.lojaId, { lojaId: f.lojaId, lojaNome: f.lojaNome, clientes: new Map(), colapsado: true })
     }
     const g = porLoja.get(f.lojaId)
     if (!g.clientes.has(f.clienteId)) {
@@ -333,7 +333,8 @@ defineExpose({ carregar })
   display: flex; align-items: center; gap: 8px; padding: 8px 12px;
   background: var(--surface); border-radius: 10px;
   border-left: 3px solid var(--brown); box-shadow: var(--shadow);
-  position: sticky; top: 0; z-index: 2; cursor: pointer; user-select: none;
+  /*position: sticky; top: 0;*/ 
+  z-index: 2; cursor: pointer; user-select: none;
   min-height: 40px;
 }
 .loja-header:active { opacity: .8; }
@@ -344,9 +345,16 @@ defineExpose({ carregar })
 .loja-header.colapsado .loja-chevron { transform: rotate(-90deg); }
 
 .grupo-clientes {
-  display: flex; flex-direction: column; gap: 6px; overflow: hidden;
+  margin-left: 10px;
+  border-left: 10px;
+  padding-left: 8px;
+  display: flex; 
+  flex-direction: column; 
+  gap: 6px; 
+  overflow: hidden;
   transition: max-height .28s cubic-bezier(.4,0,.2,1), opacity .22s ease;
-  max-height: 9999px; opacity: 1;
+  max-height: 9999px; 
+  opacity: 1;
 }
 .grupo-clientes.colapsado { max-height: 0 !important; opacity: 0; }
 
