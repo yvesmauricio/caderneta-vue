@@ -2,7 +2,7 @@
   <div class="tela-resumo">
     <div class="topbar">
       <div></div>
-      <div class="topbar-title">📊 Lista de </div>
+      <div class="topbar-title">📊 Resumo</div>
       <div></div>
     </div>
 
@@ -18,11 +18,24 @@
       </div>
     </div>
 
+    <div class="resumo-filtros">
+      <div class="search-wrap">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        <input type="text" class="search-input" placeholder="Filtrar cliente..." v-model="busca">
+      </div>
+      <div class="modo-row">
+        <button class="chip" :class="{ ativo: modo === 'abertos' }" @click="modo = 'abertos'">Em aberto</button>
+        <button class="chip" :class="{ ativo: modo === 'historico' }" @click="modo = 'historico'">Histórico</button>
+      </div>
+    </div>
+
     <!-- Lista -->
     <div class="resumo-lista">
       <div v-if="!grupos.length" class="empty">
         <div class="empty-ico">📭</div>
-        <p>Nenhum fiado em aberto.</p>
+        <p>{{ textoVazio }}</p>
       </div>
 
       <div v-for="g in grupos" :key="g.lojaId" class="grupo-loja">
@@ -36,7 +49,7 @@
             <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
           </svg>
           <span class="loja-nome">{{ g.lojaNome }}</span>
-          <span class="loja-total">R$ {{ fmt(g.total) }}</span>
+          <span class="loja-total">R$ {{ fmt(modo === 'historico' ? g.totalCompras : g.total) }}</span>
           <svg class="loja-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <path d="M6 9l6 6 6-6"/>
           </svg>
@@ -58,11 +71,11 @@
                 <div v-if="c.telefone" class="cli-tel">{{ c.telefone }}</div>
               </div>
               <div class="cli-actions">
-                <div class="cli-total" :class="{ 'cli-total--red': c.atrasado }">
-                  R$ {{ fmt(c.saldo) }}
+                <div class="cli-total" :class="{ 'cli-total--red': c.atrasado, 'cli-total--ok': modo === 'historico' && c.saldo <= 0.01 }">
+                  R$ {{ fmt(modo === 'historico' ? c.totalCompras : c.saldo) }}
                 </div>
                 <div class="cli-btns">
-                  <button class="btn-pagar-tudo" @click="abrirPagarTudo(c)" title="Quitar tudo">
+                  <button v-if="c.saldo > 0.01" class="btn-pagar-tudo" @click="abrirPagarTudo(c)" title="Quitar tudo">
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                       <polyline points="20 6 9 17 4 12"/>
                     </svg>
@@ -89,14 +102,20 @@
                 </div>
                 <div class="compra-dir">
                   <span class="compra-valor" :class="{ 'compra-valor--red': f.atrasada }">
-                    R$ {{ fmt(f.saldo) }}
+                    R$ {{ fmt(modo === 'historico' ? f.total : f.saldo) }}
                   </span>
                   <div class="compra-meta">
-                    <span v-if="f.dataVenc" class="compra-vence" :class="{ 'compra-vence--red': f.atrasada }">
+                    <span v-if="modo === 'historico'" class="compra-status" :class="{ pago: f.saldo <= 0.01 }">
+                      {{ f.saldo <= 0.01 ? 'Pago' : 'Aberto' }}
+                    </span>
+                    <span v-if="f.saldo <= 0.01" class="compra-vence compra-vence--ok">
+                      {{ textoPagamento(f) }}
+                    </span>
+                    <span v-else-if="f.dataVenc" class="compra-vence" :class="{ 'compra-vence--red': f.atrasada }">
                       {{ f.atrasada ? '⚠️ ' : '' }}{{ fmtBR(f.dataVenc) }}
                     </span>
                     <div class="compra-acoes">
-                      <button class="btn-receber" @click="abrirReceber(f)" title="Receber parcial">
+                      <button v-if="f.saldo > 0.01" class="btn-receber" @click="abrirReceber(f)" title="Receber parcial">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                           <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 1 0 0 7h5a3.5 3.5 0 1 1 0 7H6"/>
                         </svg>
@@ -183,7 +202,10 @@ import { appStore } from '../stores/appStore.js'
 const { getAll, update, del } = useDB()
 const { toast } = useToast()
 
-const grupos        = ref([])
+const fiadosTodos   = ref([])
+const clientesTodos = ref([])
+const busca         = ref('')
+const modo          = ref('abertos')
 const fiadoReceber  = ref(null)
 const fiadoExcluir  = ref(null)
 const clienteQuitar = ref(null)
@@ -198,15 +220,112 @@ const fmtBR = raw => {
 }
 const iniciais = nome => (nome || '?').trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase()
 
-const totalAberto = computed(() => grupos.value.reduce((s, g) => s + g.total, 0))
+const fiadosAbertos = computed(() => fiadosTodos.value.filter(f => f.saldo > 0.01))
+const totalAberto = computed(() => fiadosAbertos.value.reduce((s, f) => s + f.saldo, 0))
 const totalVencido = computed(() => {
   const hj = hoje()
-  return grupos.value.reduce((s, g) =>
-    s + g.clientes.reduce((s2, c) =>
-      s2 + c.fiados.filter(f => f.dataVenc && f.dataVenc < hj).reduce((s3, f) => s3 + f.saldo, 0)
-    , 0)
-  , 0)
+  return fiadosAbertos.value
+    .filter(f => f.dataVenc && f.dataVenc < hj)
+    .reduce((s, f) => s + f.saldo, 0)
 })
+const textoVazio = computed(() => {
+  if (busca.value.trim()) return 'Nenhum cliente encontrado.'
+  return modo.value === 'historico' ? 'Nenhum histórico registrado.' : 'Nenhum fiado em aberto.'
+})
+const grupos = computed(() => montarGrupos())
+
+const telMap = computed(() => Object.fromEntries(clientesTodos.value.map(c => [c.id, c.telefone])))
+
+function normalizar(v) {
+  return String(v || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+}
+
+function ultimoPagamento(f) {
+  const ps = f.pagamentos || []
+  return ps.length ? ps[ps.length - 1] : null
+}
+
+function textoPagamento(f) {
+  const ultimo = ultimoPagamento(f)
+  if (ultimo?.data) return `Pago ${fmtBR(ultimo.data)}`
+  if (f.pagoEm) return `Pago ${fmtBR(f.pagoEm)}`
+  return 'Pago'
+}
+
+function montarGrupos() {
+  const hj = hoje()
+  const termo = normalizar(busca.value.trim())
+  const fonte = modo.value === 'historico' ? fiadosTodos.value : fiadosAbertos.value
+  const filtrados = fonte.filter(f => {
+    if (!termo) return true
+    return normalizar([
+      f.clienteNome,
+      f.lojaNome,
+      resumoItens(f.itens)
+    ].join(' ')).includes(termo)
+  })
+
+  const porLoja = new Map()
+  filtrados.forEach(f => {
+    if (!porLoja.has(f.lojaId)) {
+      porLoja.set(f.lojaId, {
+        lojaId: f.lojaId,
+        lojaNome: f.lojaNome,
+        clientes: new Map(),
+        colapsado: !termo
+      })
+    }
+    const g = porLoja.get(f.lojaId)
+    if (!g.clientes.has(f.clienteId)) {
+      g.clientes.set(f.clienteId, {
+        clienteId: f.clienteId,
+        clienteNome: f.clienteNome,
+        telefone: telMap.value[f.clienteId] || '',
+        fiados: [],
+        saldo: 0,
+        atrasado: false
+      })
+    }
+    const c = g.clientes.get(f.clienteId)
+    const atrasada = f.saldo > 0.01 && f.dataVenc && f.dataVenc < hj
+    c.fiados.push({ ...f, atrasada })
+    c.saldo += f.saldo || 0
+    if (atrasada) c.atrasado = true
+  })
+
+  return [...porLoja.values()].map(g => {
+    const clientes = [...g.clientes.values()].map(c => ({
+      ...c,
+      fiados: c.fiados.sort((a, b) => String(b.dataVenda || '').localeCompare(String(a.dataVenda || ''))),
+      totalCompras: c.fiados.reduce((s, f) => s + Number(f.total || 0), 0)
+    })).sort((a, b) => a.clienteNome.localeCompare(b.clienteNome))
+    return {
+      ...g,
+      clientes,
+      total: clientes.reduce((s, c) => s + c.saldo, 0),
+      totalCompras: clientes.reduce((s, c) => s + c.totalCompras, 0),
+    }
+  }).sort((a, b) => a.lojaNome.localeCompare(b.lojaNome))
+}
+
+function dadosPagamento(valor) {
+  return {
+    valor,
+    data: hoje(),
+    criadoEm: new Date().toISOString()
+  }
+}
+
+function mudancasPagamento(f, pago, novoSaldo) {
+  const pagamentos = [...(f.pagamentos || []), dadosPagamento(pago)]
+  const quitado = novoSaldo <= 0.01
+  return {
+    saldo: novoSaldo,
+    status: quitado ? 'pago' : 'aberto',
+    pagamentos,
+    pagoEm: quitado ? new Date().toISOString() : (f.pagoEm || null)
+  }
+}
 
 function resumoItens(itens) {
   if (!itens?.length) return ''
@@ -233,7 +352,7 @@ async function receberPagamento() {
   if (!f || !valorReceber.value || valorReceber.value <= 0) return
   const pago = Math.min(valorReceber.value, f.saldo)
   const novoSaldo = Math.max(0, f.saldo - pago)
-  await update('fiados', f.id, { saldo: novoSaldo, status: novoSaldo <= 0.01 ? 'pago' : 'aberto' })
+  await update('fiados', f.id, mudancasPagamento(f, pago, novoSaldo))
   fiadoReceber.value = null
   toast('✅ Pagamento registrado!', 'sucesso')
   await carregar()
@@ -246,7 +365,7 @@ function abrirPagarTudo(cliente) {
 async function quitarTudo() {
   const c = clienteQuitar.value
   if (!c) return
-  await Promise.all(c.fiados.map(f => update('fiados', f.id, { saldo: 0, status: 'pago' })))
+  await Promise.all(c.fiados.map(f => update('fiados', f.id, mudancasPagamento(f, f.saldo, 0))))
   clienteQuitar.value = null
   toast(`✅ ${c.clienteNome} quitado!`, 'sucesso')
   await carregar()
@@ -264,37 +383,8 @@ async function excluirFiado() {
 }
 
 async function carregar() {
-  const hj = hoje()
-  const fiados = await getAll('fiados')
-  const abertos = fiados.filter(f => f.saldo > 0.01)
-  const clientes = await getAll('clientes')
-  const telMap = Object.fromEntries(clientes.map(c => [c.id, c.telefone]))
-
-  const porLoja = new Map()
-  abertos.forEach(f => {
-    if (!porLoja.has(f.lojaId)) {
-      porLoja.set(f.lojaId, { lojaId: f.lojaId, lojaNome: f.lojaNome, clientes: new Map(), colapsado: true })
-    }
-    const g = porLoja.get(f.lojaId)
-    if (!g.clientes.has(f.clienteId)) {
-      g.clientes.set(f.clienteId, {
-        clienteId: f.clienteId, clienteNome: f.clienteNome,
-        telefone: telMap[f.clienteId] || '',
-        fiados: [], saldo: 0, atrasado: false
-      })
-    }
-    const c = g.clientes.get(f.clienteId)
-    const atrasada = f.dataVenc && f.dataVenc < hj
-    c.fiados.push({ ...f, atrasada })
-    c.saldo += f.saldo
-    if (atrasada) c.atrasado = true
-  })
-
-  grupos.value = [...porLoja.values()].map(g => ({
-    ...g,
-    clientes: [...g.clientes.values()],
-    total: [...g.clientes.values()].reduce((s, c) => s + c.saldo, 0),
-  }))
+  fiadosTodos.value = await getAll('fiados')
+  clientesTodos.value = await getAll('clientes')
 }
 
 onMounted(carregar)
@@ -319,6 +409,20 @@ defineExpose({ carregar })
 .kpi-label { font-size: 10px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
 .kpi-val { font-size: 18px; font-weight: 800; color: var(--brown); font-family: var(--font-mono); margin-top: 4px; }
 .kpi-val--red { color: var(--red); }
+
+/* ── Filtros ────────────────────────────────────── */
+.resumo-filtros {
+  padding: 0 14px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.modo-row {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
 
 /* ── Lista ──────────────────────────────────────── */
 .resumo-lista {
@@ -386,6 +490,7 @@ defineExpose({ carregar })
 .cli-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
 .cli-total   { font-size: 15px; font-weight: 800; font-family: var(--font-mono); white-space: nowrap; }
 .cli-total--red { color: var(--red); }
+.cli-total--ok { color: var(--green); }
 .cli-btns    { display: flex; gap: 5px; align-items: center; }
 
 .btn-pagar-tudo {
@@ -431,8 +536,17 @@ defineExpose({ carregar })
 .compra-valor--red { color: var(--red); }
 
 .compra-meta   { display: flex; align-items: center; gap: 5px; }
+.compra-status {
+  font-size: 10px;
+  color: var(--orange);
+  font-weight: 800;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.compra-status.pago { color: var(--green); }
 .compra-vence  { font-size: 10px; color: var(--muted); white-space: nowrap; }
 .compra-vence--red { color: var(--red); font-weight: 700; }
+.compra-vence--ok { color: var(--green); font-weight: 700; }
 
 .compra-acoes { display: flex; gap: 4px; }
 
