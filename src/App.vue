@@ -13,6 +13,7 @@
           key="boasvindas"
           @nova-loja="abrirModalNovaLoja"
           @restaurar="restaurarBackup"
+          @restaurar-drive="abrirRestaurarDriveBV"
         />
 
         <!-- Dashboard -->
@@ -36,7 +37,7 @@
           v-else-if="tela === 'clientes'"
           key="clientes"
           :loja="loja"
-          @back="irPara('lojas', 'back')"
+          @back="voltarClientes"
           @escolher="onEscolherCliente"
         />
 
@@ -55,6 +56,7 @@
           v-else-if="tela === 'resumo'"
           key="resumo"
           ref="resumoRef"
+          @abrir-loja="onAbrirLojaResumo"
         />
 
         <!-- Calculadora -->
@@ -140,8 +142,25 @@
       </div>
     </Teleport>
 
+    <!-- Modal Google Drive (boas-vindas) -->
+    <Teleport to="body">
+      <div v-if="modalDriveBV" class="modal-overlay" @click.self="modalDriveBV=false">
+        <div class="modal-sheet">
+          <div class="modal-header">
+            <div class="modal-titulo">Restaurar do Google Drive</div>
+            <button class="btn-fechar" @click="modalDriveBV=false">✕</button>
+          </div>
+          <DriveBackupList 
+            :files="backupsDriveBV" 
+            :loading="carregandoDriveBV" 
+            @restore="handleRestaurarDrive" 
+          />
+        </div>
+      </div>
+    </Teleport>
+
     <!-- Input oculto para restaurar backup (boas-vindas) -->
-    <input type="file" ref="importBVRef" style="display:none" accept=".json" @change="importarBackupBV">
+    <input type="file" ref="importBVRef" class="input-hidden" accept=".json" @change="importarBackupBV">
 
   </div>
 </template>
@@ -151,6 +170,9 @@ import { ref, computed, onMounted, nextTick } from 'vue'
 import { useDB } from './composables/useDB.js'
 import { useToast } from './composables/useToast.js'
 import { appActions } from './stores/appStore.js'
+import { aplicarBackupDB } from './utils/backupHandler.js'
+import DriveBackupList from './views/DriveBackupList.vue'
+import * as driveService from './utils/googleDriveService.js'
 
 import BoasVindas    from './views/BoasVindas.vue'
 import Dashboard     from './views/Dashboard.vue'
@@ -162,7 +184,7 @@ import Calculadora   from './views/Calculadora.vue'
 import Configuracoes from './views/Configuracoes.vue'
 
 const { abrirDB, getAll, put, del } = useDB()
-const { msg: toastMsg, tipo: toastTipo, show: toastShow } = useToast()
+const { msg: toastMsg, tipo: toastTipo, show: toastShow, toast } = useToast()
 
 // ── State ──────────────────────────────────────────────────
 const tela           = ref('boasvindas')
@@ -170,19 +192,25 @@ const navAtivo       = ref('dashboard')
 const transitionName = ref('slide')
 const loja           = ref(null)
 const cliente        = ref(null)
+const origemClientes = ref('lojas')
 
-// Refs de componentes para refresh
 const dashRef   = ref(null)
 const lojasRef  = ref(null)
 const resumoRef = ref(null)
 
-// Modal primeira loja
 const modalNovaLoja = ref(false)
 const novaLojaNome  = ref('')
 const novaLojaRef   = ref('')
 const importBVRef   = ref(null)
 
-// Ordem das telas para definir direção da animação
+// ── Google Drive (boas-vindas) ──────────────────────────────
+const GOOGLE_DRIVE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
+const GOOGLE_DRIVE_SCOPE     = 'https://www.googleapis.com/auth/drive.file'
+const driveAccessTokenBV  = ref('')
+const modalDriveBV        = ref(false)
+const backupsDriveBV      = ref([])
+const carregandoDriveBV   = ref(false)
+
 const ORDEM = { boasvindas: -1, dashboard: 0, lojas: 1, clientes: 2, lancar: 3, resumo: 1, calc: 1, config: 1 }
 
 const mostrarNav = computed(() => !['boasvindas', 'lancar'].includes(tela.value))
@@ -219,6 +247,14 @@ async function navSwitch(aba) {
 }
 
 function onEscolherLoja(l) {
+  origemClientes.value = 'lojas'
+  loja.value = l
+  irPara('clientes')
+}
+
+function onAbrirLojaResumo(l) {
+  origemClientes.value = 'resumo'
+  navAtivo.value = 'resumo'
   loja.value = l
   irPara('clientes')
 }
@@ -228,14 +264,25 @@ function onEscolherCliente(c) {
   irPara('lancar')
 }
 
+async function voltarClientes() {
+  if (origemClientes.value === 'resumo') {
+    navAtivo.value = 'resumo'
+    irPara('resumo', 'back')
+    await nextTick()
+    resumoRef.value?.carregar()
+    return
+  }
+  irPara('lojas', 'back')
+}
+
 async function onFiadoSalvo() {
   irPara('clientes', 'back')
 }
 
-// ── Primeira loja (boas-vindas) ─────────────────────────────
+// ── Primeira loja ───────────────────────────────────────────
 function abrirModalNovaLoja() {
-  novaLojaNome.value = ''
-  novaLojaRef.value  = ''
+  novaLojaNome.value  = ''
+  novaLojaRef.value   = ''
   modalNovaLoja.value = true
 }
 
@@ -261,20 +308,46 @@ async function importarBackupBV(e) {
   reader.onload = async ev => {
     try {
       const dados = JSON.parse(ev.target.result)
-      if (!dados.lojas && !dados.clientes && !dados.fiados) throw new Error()
-      for (const store of ['lojas', 'clientes', 'fiados']) {
-        const itens = await getAll(store)
-        for (const i of itens) await del(store, i.id)
-      }
-      if (dados.lojas)    for (const l of dados.lojas)    { delete l.id; await put('lojas', l) }
-      if (dados.clientes) for (const c of dados.clientes) { delete c.id; await put('clientes', c) }
-      if (dados.fiados)   for (const f of dados.fiados)   { delete f.id; await put('fiados', f) }
+      await aplicarBackupDB(dados, { getAll, put, del, appActions })
       setTimeout(() => location.reload(), 800)
     } catch {
       alert('Arquivo de backup inválido.')
     }
   }
   reader.readAsText(file)
+}
+
+async function abrirRestaurarDriveBV() {
+  if (!navigator.onLine) { toast('Conecte na internet para acessar o Google Drive.', 'aviso'); return }
+  if (!GOOGLE_DRIVE_CLIENT_ID) { toast('Configure o Client ID do Google Drive.', 'aviso'); return }
+  modalDriveBV.value    = true
+  carregandoDriveBV.value = true
+  backupsDriveBV.value  = []
+  try {
+    const token = driveAccessTokenBV.value || await driveService.pedirTokenGoogle(GOOGLE_DRIVE_CLIENT_ID)
+    driveAccessTokenBV.value = token
+    backupsDriveBV.value = await driveService.listarBackupsDrive(token)
+  } catch {
+    modalDriveBV.value = false
+    toast('Não foi possível ler o Google Drive.', 'erro')
+  } finally {
+    carregandoDriveBV.value = false
+  }
+}
+
+async function handleRestaurarDrive(backup) {
+  const ok = confirm(`Restaurar o backup "${backup.name}"? Os dados atuais serão substituídos.`)
+  if (!ok) return
+  try {
+    const token = driveAccessTokenBV.value || await driveService.pedirTokenGoogle(GOOGLE_DRIVE_CLIENT_ID)
+    const dados = await driveService.baixarBackupDrive(token, backup.id)
+    await aplicarBackupDB(dados, { getAll, put, del, appActions })
+    modalDriveBV.value = false
+    toast('✅ Backup restaurado!', 'sucesso')
+    setTimeout(() => location.reload(), 1200)
+  } catch {
+    toast('Não foi possível restaurar este backup.', 'erro')
+  }
 }
 
 // ── Init ────────────────────────────────────────────────────
@@ -292,18 +365,28 @@ onMounted(async () => {
     await nextTick()
     dashRef.value?.refresh()
   }
-  // else permanece em 'boasvindas'
 })
 </script>
 
 <style>
 #app-shell {
-  height: 100%; display: flex; flex-direction: column;
-  position: relative; overflow: hidden;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
 }
+
 .screen-stack {
-  flex: 1; position: relative; overflow: hidden;
-  display: flex; flex-direction: column;
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.input-hidden {
+  display: none;
 }
 
 /* Slide forward */

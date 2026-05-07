@@ -42,8 +42,8 @@
         <!-- Cabeçalho da loja -->
         <div
           class="loja-header"
-          :class="{ colapsado: g.colapsado }"
-          @click="g.colapsado = !g.colapsado"
+          :class="{ colapsado: lojaColapsada(g) }"
+          @click="alternarLoja(g)"
         >
           <svg class="loja-ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
@@ -56,10 +56,11 @@
         </div>
 
         <!-- Clientes da loja -->
-        <div class="grupo-clientes" :class="{ colapsado: g.colapsado }">
+        <div class="grupo-clientes" :class="{ colapsado: lojaColapsada(g) }">
           <div
             v-for="c in g.clientes" :key="c.clienteId"
             class="cli-card" :class="{ atrasado: c.atrasado }"
+            @click="abrirLoja(g)"
           >
             <!-- Cabeçalho do cliente -->
             <div class="cli-header">
@@ -75,13 +76,13 @@
                   R$ {{ fmt(modo === 'historico' ? c.totalCompras : c.saldo) }}
                 </div>
                 <div class="cli-btns">
-                  <button v-if="c.saldo > 0.01" class="btn-pagar-tudo" @click="abrirPagarTudo(c)" title="Quitar tudo">
+                  <button v-if="c.saldo > 0.01" class="btn-pagar-tudo" @click.stop="abrirPagarTudo(c)" title="Quitar tudo">
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                       <polyline points="20 6 9 17 4 12"/>
                     </svg>
                     Quitar
                   </button>
-                  <button v-if="c.telefone" class="btn-zap" @click="cobrarWhatsapp(c)" title="Cobrar no WhatsApp">
+                  <button v-if="c.telefone" class="btn-zap" @click.stop="cobrarWhatsapp(c)" title="Cobrar no WhatsApp">
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
                     </svg>
@@ -115,12 +116,12 @@
                       {{ f.atrasada ? '⚠️ ' : '' }}{{ fmtBR(f.dataVenc) }}
                     </span>
                     <div class="compra-acoes">
-                      <button v-if="f.saldo > 0.01" class="btn-receber" @click="abrirReceber(f)" title="Receber parcial">
+                      <button v-if="f.saldo > 0.01" class="btn-receber" @click.stop="abrirReceber(f)" title="Receber parcial">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                           <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 1 0 0 7h5a3.5 3.5 0 1 1 0 7H6"/>
                         </svg>
                       </button>
-                      <button class="btn-excluir-compra" @click="confirmarExcluir(f)" title="Excluir">
+                      <button class="btn-excluir-compra" @click.stop="confirmarExcluir(f)" title="Excluir">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                           <polyline points="3 6 5 6 21 6"/>
                           <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
@@ -201,6 +202,7 @@ import { appStore } from '../stores/appStore.js'
 
 const { getAll, update, del } = useDB()
 const { toast } = useToast()
+const emit = defineEmits(['abrir-loja'])
 
 const fiadosTodos   = ref([])
 const clientesTodos = ref([])
@@ -210,6 +212,7 @@ const fiadoReceber  = ref(null)
 const fiadoExcluir  = ref(null)
 const clienteQuitar = ref(null)
 const valorReceber  = ref(0)
+const lojasExpandidas = ref(new Set())
 
 const fmt = v => Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const hoje = () => new Date().toLocaleDateString('sv')
@@ -272,7 +275,6 @@ function montarGrupos() {
         lojaId: f.lojaId,
         lojaNome: f.lojaNome,
         clientes: new Map(),
-        colapsado: !termo
       })
     }
     const g = porLoja.get(f.lojaId)
@@ -360,6 +362,28 @@ async function receberPagamento() {
 
 function abrirPagarTudo(cliente) {
   clienteQuitar.value = cliente
+}
+
+function lojaColapsada(grupo) {
+  return !busca.value.trim() && !lojasExpandidas.value.has(grupo.lojaId)
+}
+
+function alternarLoja(grupo) {
+  const proximas = new Set(lojasExpandidas.value)
+  if (proximas.has(grupo.lojaId)) {
+    proximas.delete(grupo.lojaId)
+  } else {
+    proximas.add(grupo.lojaId)
+  }
+  lojasExpandidas.value = proximas
+}
+
+function abrirLoja(grupo) {
+  emit('abrir-loja', {
+    id: grupo.lojaId,
+    nome: grupo.lojaNome,
+    referencia: ''
+  })
 }
 
 async function quitarTudo() {

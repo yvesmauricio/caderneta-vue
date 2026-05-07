@@ -19,13 +19,12 @@
         <div class="config-acc-body">
           <div class="config-row download" @click="exportarBackup">
             <div class="config-row-icon">📥</div>
-              <div class="config-row-info">
-                <div class="config-row-label">Baixar Backup</div>
-                <div class="config-row-sub">Salva um arquivo .json na pasta Downloads</div>
-              </div>
+            <div class="config-row-info">
+              <div class="config-row-label">Baixar Backup</div>
+              <div class="config-row-sub">Salva um arquivo .json na pasta Downloads</div>
+            </div>
             <div class="config-row-arrow">›</div>
           </div>
-
           <div class="config-row restore" @click="importFileRef?.click()">
             <div class="config-row-icon">📤</div>
             <div class="config-row-info">
@@ -43,7 +42,7 @@
             <div class="config-row-arrow">›</div>
           </div>
           <div class="config-row drive" @click="salvarNoGoogleDrive">
-            <div class="config-row-icon">G</div>
+            <div class="config-row-icon config-row-icon--letter">G</div>
             <div class="config-row-info">
               <div class="config-row-label">Salvar direto no Google Drive</div>
               <div class="config-row-sub">Entra na sua conta Google e envia o .json</div>
@@ -51,14 +50,14 @@
             <div class="config-row-arrow">›</div>
           </div>
           <div class="config-row drive-restore" @click="abrirRestaurarGoogleDrive">
-            <div class="config-row-icon">G</div>
+            <div class="config-row-icon config-row-icon--letter config-row-icon--green">G</div>
             <div class="config-row-info">
               <div class="config-row-label">Restaurar do Google Drive</div>
               <div class="config-row-sub">Escolha um backup salvo pelo app no Drive</div>
             </div>
             <div class="config-row-arrow">›</div>
           </div>
-          <input type="file" ref="importFileRef" class="sr-file-input" accept=".json" @change="importarBackup">
+          <input type="file" ref="importFileRef" class="input-hidden" accept=".json" @change="importarBackup">
         </div>
       </div>
 
@@ -71,37 +70,68 @@
           </span>
         </div>
         <div class="config-acc-body">
-          <!-- Input invisível para capturar ou escolher foto -->
-          <input type="file" ref="fotoInputRef" class="sr-file-input" accept="image/*" @change="processarFoto">
+          <input type="file" ref="fotoInputRef" class="input-hidden" accept="image/*" @change="processarFoto">
 
-          <div class="prod-edit-row" v-for="(p, i) in produtosEdit" :key="p.id">
-            <div class="prod-edit-main">
-              <div class="prod-edit-top">
-                <div class="prod-edit-icon-box">
-                  <img v-if="p.emoji?.startsWith('data:')" :src="p.emoji" class="prod-icon-img" @click="removerFoto(i)" title="Clique para remover foto">
-                  <input v-else type="text" class="prod-edit-emoji-input" v-model="produtosEdit[i].emoji" title="Digite emoji ou clique na câmera">
-                  <button class="btn-foto-trigger" @click="abrirSeletorFoto(i)" title="Usar foto real">📷</button>
-                </div>
-                <input type="text" class="prod-edit-nome" v-model="produtosEdit[i].nome" placeholder="Nome do produto">
+          <div class="prod-lista">
+            <div class="prod-card" v-for="(p, i) in produtosEdit" :key="p.id">
+
+              <!-- Ícone / Foto -->
+              <div class="prod-card-icone">
+                <img
+                  v-if="p.emoji?.startsWith('data:')"
+                  :src="p.emoji"
+                  class="prod-foto"
+                  @click="removerFoto(i)"
+                  title="Clique para remover foto"
+                >
+                <input
+                  v-else
+                  type="text"
+                  class="prod-emoji-input"
+                  v-model="produtosEdit[i].emoji"
+                  title="Digite emoji"
+                >
+                <button class="btn-foto" @click="abrirSeletorFoto(i)" title="Usar foto real">📷</button>
               </div>
-              <div class="prod-edit-bottom">
-                <label class="prod-edit-preco-wrap">
-                  <span class="prod-edit-preco-label">R$</span>
+
+              <!-- Campos: nome + preço -->
+              <div class="prod-card-campos">
+                <input
+                  type="text"
+                  class="prod-input prod-nome"
+                  v-model="produtosEdit[i].nome"
+                  placeholder="Nome do produto"
+                >
+                <div class="prod-preco-wrap">
+                  <span class="prod-preco-label">R$</span>
                   <input
                     type="text"
-                    class="prod-edit-preco"
-                    :value="formatarPrecoEdit(p.preco)"
-                    inputmode="numeric"
-                    autocomplete="off"
+                    class="prod-preco"
+                    inputmode="decimal"
+                    :value="formatarPreco(p.preco)"
+                    @input="onPrecoInput(i, $event)"
                     placeholder="0,00"
-                    @input="atualizarPrecoProduto(i, $event)"
-                    @focus="$event.target.select()"
                   >
-                </label>
-                <button class="btn-remove-prod" @click="removerProduto(i)" title="Remover produto">🗑 Remover</button>
+                </div>
               </div>
+
+              <!-- Confirmar exclusão ou botão lixeira -->
+              <div v-if="confirmandoIdx === i" class="prod-confirm-del">
+                <span class="prod-confirm-label">Excluir?</span>
+                <button class="prod-confirm-sim" @click="confirmarRemocao(i)">Sim</button>
+                <button class="prod-confirm-nao" @click="confirmandoIdx = -1">Não</button>
+              </div>
+              <button v-else class="prod-card-del" @click="confirmandoIdx = i" title="Remover produto">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="3 6 5 6 21 6"/>
+                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                  <path d="M10 11v6M14 11v6"/>
+                  <path d="M9 6V4h6v2"/>
+                </svg>
+              </button>
             </div>
           </div>
+
           <button class="config-add-btn" @click="adicionarProduto">＋ Adicionar Novo Produto</button>
           <button class="config-save-btn" @click="salvarProdutos">✅ Salvar Produtos</button>
         </div>
@@ -161,25 +191,11 @@
             <div class="modal-titulo">Restaurar do Google Drive</div>
             <button class="btn-fechar" @click="modalDrive=false">✕</button>
           </div>
-
-          <div v-if="carregandoDrive" class="drive-empty">Buscando backups...</div>
-          <div v-else-if="!backupsDrive.length" class="drive-empty">
-            Nenhum backup do app encontrado no Google Drive.
-          </div>
-          <div v-else class="drive-backup-list">
-            <button
-              v-for="b in backupsDrive"
-              :key="b.id"
-              class="drive-backup-row"
-              @click="restaurarBackupDrive(b)"
-            >
-              <div class="drive-backup-info">
-                <div class="drive-backup-name">{{ b.name }}</div>
-                <div class="drive-backup-date">{{ fmtDataHora(b.createdTime) }}</div>
-              </div>
-              <div class="drive-backup-action">Restaurar</div>
-            </button>
-          </div>
+          <DriveBackupList 
+            :files="backupsDrive" 
+            :loading="carregandoDrive" 
+            @restore="restaurarBackupDrive" 
+          />
         </div>
       </div>
     </Teleport>
@@ -191,19 +207,23 @@ import { ref, reactive, onMounted } from 'vue'
 import { useDB } from '../composables/useDB.js'
 import { useToast } from '../composables/useToast.js'
 import { appStore, appActions } from '../stores/appStore.js'
+import { aplicarBackupDB } from '../utils/backupHandler.js'
+import DriveBackupList from './DriveBackupList.vue'
+import * as driveService from '../utils/googleDriveService.js'
 
 const { getAll, put, del } = useDB()
 const { toast } = useToast()
 
-const importFileRef = ref(null)
-const fotoInputRef = ref(null)
-const activeIdx = ref(-1)
+const importFileRef  = ref(null)
+const fotoInputRef   = ref(null)
+const activeIdx      = ref(-1)
+const confirmandoIdx = ref(-1)   // índice do produto aguardando confirmação de exclusão
+
 const GOOGLE_DRIVE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
-const GOOGLE_DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file'
 const driveAccessToken = ref('')
-const modalDrive = ref(false)
-const backupsDrive = ref([])
-const carregandoDrive = ref(false)
+const modalDrive       = ref(false)
+const backupsDrive     = ref([])
+const carregandoDrive  = ref(false)
 
 const acc = reactive({ backup: true, produtos: false, taxas: false, sobre: false })
 
@@ -215,15 +235,18 @@ function toggle(key) {
   acc[key] = !acc[key]
 }
 
-function fmtDataHora(raw) {
-  if (!raw) return ''
-  return new Date(raw).toLocaleString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
+/* ── Máscara de preço BR (6,50) ──────────────────────── */
+function formatarPreco(valor) {
+  const num = Number(valor) || 0
+  return num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+function onPrecoInput(i, e) {
+  const digits   = e.target.value.replace(/\D/g, '')
+  const centavos = parseInt(digits || '0', 10)
+  const valor    = centavos / 100
+  produtosEdit.value[i].preco = valor
+  e.target.value = valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
 onMounted(() => {
@@ -237,27 +260,9 @@ function adicionarProduto() {
   acc.produtos = true
 }
 
-function removerProduto(index) {
-  const nome = produtosEdit.value[index]?.nome?.trim() || 'este produto'
-  const ok = confirm(`Remover "${nome}" da lista de produtos?`)
-  if (!ok) return
+function confirmarRemocao(index) {
   produtosEdit.value.splice(index, 1)
-}
-
-function formatarPrecoEdit(valor) {
-  const numero = Number(valor)
-  const seguro = Number.isFinite(numero) ? numero : 0
-  return seguro.toLocaleString('pt-BR', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  })
-}
-
-function atualizarPrecoProduto(index, event) {
-  const digitos = event.target.value.replace(/\D/g, '')
-  const centavos = Number(digitos || 0)
-  produtosEdit.value[index].preco = centavos / 100
-  event.target.value = formatarPrecoEdit(produtosEdit.value[index].preco)
+  confirmandoIdx.value = -1
 }
 
 function abrirSeletorFoto(index) {
@@ -269,32 +274,26 @@ async function processarFoto(e) {
   const file = e.target.files?.[0]
   if (!file || activeIdx.value === -1) return
 
-  const targetIdx = activeIdx.value // Captura o índice atual para o callback
-  e.target.value = '' // Limpa o input imediatamente
+  const targetIdx = activeIdx.value
+  e.target.value  = ''
 
-  // Redimensionamos para um quadrado de 96px com compressão JPEG.
   const imgUrl = URL.createObjectURL(file)
-  const img = new Image()
+  const img    = new Image()
 
   img.onload = () => {
-    const canvas = document.createElement('canvas')
-    const size = 96
-    canvas.width = size
+    const canvas  = document.createElement('canvas')
+    const size    = 96
+    canvas.width  = size
     canvas.height = size
-    const ctx = canvas.getContext('2d')
-
-    // Cálculo para Crop Center (Manter a imagem centralizada no quadrado)
+    const ctx   = canvas.getContext('2d')
     const scale = Math.max(size / img.width, size / img.height)
-    const x = (size / 2) - (img.width / 2) * scale
-    const y = (size / 2) - (img.height / 2) * scale
-
-    ctx.fillStyle = '#FFFFFF' // Fundo branco para JPEGs com transparência
+    const x     = (size / 2) - (img.width  / 2) * scale
+    const y     = (size / 2) - (img.height / 2) * scale
+    ctx.fillStyle = '#FFFFFF'
     ctx.fillRect(0, 0, size, size)
     ctx.drawImage(img, x, y, img.width * scale, img.height * scale)
-
     produtosEdit.value[targetIdx].emoji = canvas.toDataURL('image/jpeg', 0.7)
-    
-    URL.revokeObjectURL(imgUrl) // Libera memória
+    URL.revokeObjectURL(imgUrl)
     activeIdx.value = -1
   }
 
@@ -329,7 +328,7 @@ function salvarTaxas() {
 async function exportarBackup() {
   const { blob, nomeArquivo } = await criarArquivoBackup()
   const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
+  const a   = document.createElement('a')
   a.href = url
   a.download = nomeArquivo
   a.click()
@@ -339,18 +338,15 @@ async function exportarBackup() {
 
 async function criarArquivoBackup() {
   const dados = {
-    lojas:       await getAll('lojas'),
-    clientes:    await getAll('clientes'),
-    fiados:      await getAll('fiados'),
-    config: {
-      produtos: appStore.produtos,
-      taxas:    appStore.taxas
-    },
+    lojas:    await getAll('lojas'),
+    clientes: await getAll('clientes'),
+    fiados:   await getAll('fiados'),
+    config:   { produtos: appStore.produtos, taxas: appStore.taxas },
     exportadoEm: new Date().toISOString()
   }
-  const agora = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
+  const agora       = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
   const nomeArquivo = `backup-caderno-${agora}.json`
-  const blob = new Blob([JSON.stringify(dados, null, 2)], { type: 'application/json' })
+  const blob        = new Blob([JSON.stringify(dados, null, 2)], { type: 'application/json' })
   return { blob, nomeArquivo }
 }
 
@@ -358,7 +354,6 @@ async function compartilharBackup() {
   try {
     const { blob, nomeArquivo } = await criarArquivoBackup()
     const file = new File([blob], nomeArquivo, { type: 'application/json' })
-
     if (navigator.canShare?.({ files: [file] })) {
       await navigator.share({ title: 'Backup Caderneta', files: [file] })
       toast('Backup compartilhado!', 'sucesso')
@@ -370,144 +365,28 @@ async function compartilharBackup() {
   }
 }
 
-function carregarGoogleIdentity() {
-  if (window.google?.accounts?.oauth2) return Promise.resolve()
-  return new Promise((resolve, reject) => {
-    const existente = document.querySelector('script[data-google-identity]')
-    if (existente) {
-      existente.addEventListener('load', resolve, { once: true })
-      existente.addEventListener('error', reject, { once: true })
-      return
-    }
-    const script = document.createElement('script')
-    script.src = 'https://accounts.google.com/gsi/client'
-    script.async = true
-    script.defer = true
-    script.dataset.googleIdentity = 'true'
-    script.onload = resolve
-    script.onerror = () => reject(new Error('google_identity_load_failed'))
-    document.head.appendChild(script)
-  })
-}
-
-async function pedirTokenGoogle() {
-  await carregarGoogleIdentity()
-  return new Promise((resolve, reject) => {
-    const client = window.google.accounts.oauth2.initTokenClient({
-      client_id: GOOGLE_DRIVE_CLIENT_ID,
-      scope: GOOGLE_DRIVE_SCOPE,
-      prompt: 'consent',
-      callback: response => {
-        if (response?.error) reject(new Error(response.error))
-        else {
-          driveAccessToken.value = response.access_token
-          resolve(response.access_token)
-        }
-      }
-    })
-    client.requestAccessToken()
-  })
-}
-
-async function enviarArquivoDrive(accessToken, blob, nomeArquivo) {
-  const boundary = `caderneta_${Date.now()}`
-  const metadata = {
-    name: nomeArquivo,
-    mimeType: 'application/json',
-    appProperties: {
-      cadernetaBackup: 'true'
-    }
-  }
-  const body = new Blob([
-    `--${boundary}\r\n`,
-    'Content-Type: application/json; charset=UTF-8\r\n\r\n',
-    JSON.stringify(metadata),
-    '\r\n',
-    `--${boundary}\r\n`,
-    'Content-Type: application/json\r\n\r\n',
-    blob,
-    '\r\n',
-    `--${boundary}--`
-  ], { type: `multipart/related; boundary=${boundary}` })
-
-  const resp = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': `multipart/related; boundary=${boundary}`
-    },
-    body
-  })
-
-  if (!resp.ok) {
-    const erro = await resp.text()
-    throw new Error(erro || 'drive_upload_failed')
-  }
-  return resp.json()
-}
-
-async function listarBackupsDrive(accessToken) {
-  const q = "name contains 'backup-caderno-' and mimeType = 'application/json' and trashed = false"
-  const params = new URLSearchParams({
-    q,
-    orderBy: 'createdTime desc',
-    pageSize: '10',
-    fields: 'files(id,name,createdTime,size)'
-  })
-  const resp = await fetch(`https://www.googleapis.com/drive/v3/files?${params}`, {
-    headers: { Authorization: `Bearer ${accessToken}` }
-  })
-  if (!resp.ok) throw new Error(await resp.text() || 'drive_list_failed')
-  const dados = await resp.json()
-  return dados.files || []
-}
-
-async function baixarBackupDrive(accessToken, fileId) {
-  const resp = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
-    headers: { Authorization: `Bearer ${accessToken}` }
-  })
-  if (!resp.ok) throw new Error(await resp.text() || 'drive_download_failed')
-  return resp.json()
-}
-
 async function salvarNoGoogleDrive() {
-  if (!navigator.onLine) {
-    toast('Conecte na internet para enviar ao Google Drive.', 'aviso')
-    return
-  }
-  if (!GOOGLE_DRIVE_CLIENT_ID) {
-    toast('Configure o Client ID do Google Drive.', 'aviso')
-    return
-  }
-
+  if (!navigator.onLine)       { toast('Conecte na internet para enviar ao Google Drive.', 'aviso'); return }
+  if (!GOOGLE_DRIVE_CLIENT_ID) { toast('Configure o Client ID do Google Drive.', 'aviso'); return }
   try {
     const { blob, nomeArquivo } = await criarArquivoBackup()
-    const token = await pedirTokenGoogle()
-    await enviarArquivoDrive(token, blob, nomeArquivo)
+    const token = await driveService.pedirTokenGoogle(GOOGLE_DRIVE_CLIENT_ID)
+    await driveService.enviarArquivoDrive(token, blob, nomeArquivo)
     toast('✅ Backup salvo no Google Drive!', 'sucesso')
   } catch (err) {
-    if (err?.message === 'popup_closed') return
     toast('Não foi possível salvar no Drive.', 'erro')
   }
 }
 
 async function abrirRestaurarGoogleDrive() {
-  if (!navigator.onLine) {
-    toast('Conecte na internet para acessar o Google Drive.', 'aviso')
-    return
-  }
-  if (!GOOGLE_DRIVE_CLIENT_ID) {
-    toast('Configure o Client ID do Google Drive.', 'aviso')
-    return
-  }
-
-  modalDrive.value = true
+  if (!navigator.onLine)       { toast('Conecte na internet para acessar o Google Drive.', 'aviso'); return }
+  if (!GOOGLE_DRIVE_CLIENT_ID) { toast('Configure o Client ID do Google Drive.', 'aviso'); return }
+  modalDrive.value      = true
   carregandoDrive.value = true
-  backupsDrive.value = []
-
+  backupsDrive.value    = []
   try {
-    const token = driveAccessToken.value || await pedirTokenGoogle()
-    backupsDrive.value = await listarBackupsDrive(token)
+    const token = driveAccessToken.value || await driveService.pedirTokenGoogle(GOOGLE_DRIVE_CLIENT_ID)
+    backupsDrive.value = await driveService.listarBackupsDrive(token)
   } catch {
     modalDrive.value = false
     toast('Não foi possível ler o Google Drive.', 'erro')
@@ -519,41 +398,15 @@ async function abrirRestaurarGoogleDrive() {
 async function restaurarBackupDrive(backup) {
   const ok = confirm(`Restaurar o backup "${backup.name}"? Os dados atuais serão substituídos.`)
   if (!ok) return
-
   try {
-    const token = driveAccessToken.value || await pedirTokenGoogle()
-    const dados = await baixarBackupDrive(token, backup.id)
-    await aplicarBackup(dados)
+    const token = driveAccessToken.value || await driveService.pedirTokenGoogle(GOOGLE_DRIVE_CLIENT_ID)
+    const dados = await driveService.baixarBackupDrive(token, backup.id)
+    await aplicarBackupDB(dados, { getAll, put, del, appActions })
     modalDrive.value = false
     toast('✅ Backup restaurado do Google Drive!', 'sucesso')
     setTimeout(() => location.reload(), 1200)
   } catch {
     toast('Não foi possível restaurar este backup.', 'erro')
-  }
-}
-
-async function aplicarBackup(dados) {
-  if (!dados.lojas && !dados.clientes && !dados.fiados) throw new Error('invalid')
-
-  for (const store of ['lojas', 'clientes', 'fiados']) {
-    const itens = await getAll(store)
-    for (const i of itens) await del(store, i.id)
-  }
-
-  if (dados.lojas) for (const l of dados.lojas) await put('lojas', { ...l })
-  if (dados.clientes) for (const c of dados.clientes) await put('clientes', { ...c })
-
-  if (dados.fiados) {
-    for (const item of dados.fiados) {
-      const f = { ...item }
-      if (f.status === 'PENDENTE') f.status = 'aberto'
-      await put('fiados', f)
-    }
-  }
-
-  if (dados.config) {
-    if (dados.config.produtos) appActions.salvarProdutos(dados.config.produtos)
-    if (dados.config.taxas) appActions.salvarTaxas(dados.config.taxas)
   }
 }
 
@@ -564,7 +417,7 @@ async function importarBackup(e) {
   reader.onload = async ev => {
     try {
       const dados = JSON.parse(ev.target.result)
-      await aplicarBackup(dados)
+      await aplicarBackupDB(dados, { getAll, put, del, appActions })
       toast('✅ Restauração concluída!', 'sucesso')
       setTimeout(() => location.reload(), 1200)
     } catch {
@@ -577,83 +430,162 @@ async function importarBackup(e) {
 </script>
 
 <style scoped>
-.tela-config { display: flex; flex-direction: column; height: 100%; background: var(--bg); }
-.sr-file-input { display: none; }
-.config-body {
-  flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain; padding: 14px 14px 100px;
-  display: flex; flex-direction: column; gap: 10px;
+/* ── Layout geral ────────────────────────────────────────── */
+.tela-config {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg);
 }
+
+.config-body {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  padding: 12px 12px 100px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.input-hidden {
+  display: none;
+}
+
+/* ── Accordion ───────────────────────────────────────────── */
 .config-section {
-  background: var(--surface); border: 1.5px solid var(--border);
-  border-radius: var(--r); overflow: hidden; box-shadow: var(--shadow);
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r);
+  overflow: hidden;
+  box-shadow: var(--shadow);
   flex-shrink: 0;
 }
+
 .config-section-title {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 15px; font-size: 14px; font-weight: 800; cursor: pointer;
-  gap: 8px; user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 15px;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  gap: 8px;
+  user-select: none;
 }
-.config-section-title:active { opacity: .8; }
+
+.config-section-title:active {
+  opacity: 0.8;
+}
+
 .config-acc-chevron {
-  color: var(--brown-light); flex-shrink: 0;
-  transition: transform .22s cubic-bezier(.4,0,.2,1);
-  display: flex; align-items: center;
+  color: var(--brown-light);
+  flex-shrink: 0;
+  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
 }
-.config-section.aberto .config-acc-chevron { transform: rotate(180deg); }
+
+.config-section.aberto .config-acc-chevron {
+  transform: rotate(180deg);
+}
+
 .config-acc-body {
   max-height: 0;
   overflow: hidden;
-  transition: opacity .22s ease; 
   opacity: 0;
+  transition: opacity 0.22s ease;
 }
+
 .config-section.aberto .config-acc-body {
-  max-height: 2000px; /* Valor alto para garantir que tudo apareça */
+  max-height: 2000px;
   opacity: 1;
   border-top: 1px solid var(--border);
   display: flex;
   flex-direction: column;
 }
+
+/* ── Linhas de backup ────────────────────────────────────── */
 .config-row {
-  display: flex; align-items: center; gap: 12px;
-  padding: 13px 15px; border-bottom: 1px solid var(--border);
-  cursor: pointer; transition: background var(--t); min-height: 54px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 15px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background var(--t);
+  min-height: 54px;
 }
-.config-row:last-of-type { border-bottom: none; }
-.config-row:active { background: var(--cream); }
-.config-row-icon   { font-size: 20px; width: 36px; text-align: center; flex-shrink: 0; }
-.config-row-info   { flex: 1; min-width: 0; overflow: hidden;}
-.config-row-label  { font-size: 14px; font-weight: 700; }
+
+.config-row:last-of-type {
+  border-bottom: none;
+}
+
+.config-row:active {
+  background: var(--cream);
+}
+
+.config-row-icon {
+  font-size: 20px;
+  width: 36px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.config-row-icon--letter {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--blue);
+}
+
+.config-row-icon--green {
+  color: var(--green);
+}
+
+.config-row-info {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.config-row-label {
+  font-size: 14px;
+  font-weight: 700;
+}
+
 .config-row-sub {
+  font-size: 11px;
+  color: var(--muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
- }
-.config-row-arrow  { color: var(--muted); font-size: 18px; flex-shrink: 0; }
+}
+
+.config-row-arrow {
+  color: var(--muted);
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
 .config-row.download .config-row-icon { color: var(--brown-mid); }
-.config-row.share   .config-row-icon  { color: #34a853; }
-.config-row.drive   .config-row-icon  {
-  color: var(--blue);
-  font-size: 16px;
-  font-weight: 800;
-}
-.config-row.drive-restore .config-row-icon {
-  color: var(--green);
-  font-size: 16px;
-  font-weight: 800;
-}
-.config-row.restore .config-row-icon  { color: var(--orange); }
+.config-row.share    .config-row-icon { color: #34a853; }
+.config-row.restore  .config-row-icon { color: var(--orange); }
+
+/* ── Drive modal ─────────────────────────────────────────── */
 .drive-empty {
   padding: 18px 4px;
   color: var(--muted);
   font-size: 13px;
   text-align: center;
 }
+
 .drive-backup-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
+
 .drive-backup-row {
   display: flex;
   align-items: center;
@@ -668,8 +600,16 @@ async function importarBackup(e) {
   cursor: pointer;
   text-align: left;
 }
-.drive-backup-row:active { background: var(--cream); }
-.drive-backup-info { flex: 1; min-width: 0; }
+
+.drive-backup-row:active {
+  background: var(--cream);
+}
+
+.drive-backup-info {
+  flex: 1;
+  min-width: 0;
+}
+
 .drive-backup-name {
   font-size: 13px;
   font-weight: 800;
@@ -678,145 +618,353 @@ async function importarBackup(e) {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
 .drive-backup-date {
   margin-top: 2px;
   font-size: 11px;
   color: var(--muted);
 }
+
 .drive-backup-action {
   color: var(--green);
   font-size: 11px;
   font-weight: 800;
   white-space: nowrap;
 }
-.prod-edit-row {
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
-.prod-edit-row:last-child { border-bottom: none; }
 
-.prod-edit-main {
+/* ── Lista de produtos ───────────────────────────────────── */
+.prod-lista {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+}
+
+/* Card compacto: ícone | campos | ação */
+.prod-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.prod-card:last-child {
+  border-bottom: none;
+}
+
+/* ── Ícone / foto ────────────────────────────────────────── */
+.prod-card-icone {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.prod-foto {
+  display: block;
+  width: 42px;
+  height: 42px;
+  border-radius: var(--r-sm);
+  object-fit: cover;
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  background: var(--bg);
+}
+
+.prod-emoji-input {
+  display: block;
+  width: 42px;
+  height: 42px;
+  font-size: 22px;
+  text-align: center;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 0;
+  cursor: pointer;
+  font-family: var(--font-ui);
+}
+
+.prod-emoji-input:focus {
+  outline: none;
+  border-color: var(--brown-light);
+  background: var(--surface);
+}
+
+.btn-foto {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  font-size: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  z-index: 2;
+}
+
+.btn-foto:active {
+  transform: scale(0.9);
+}
+
+/* ── Campos nome + preço ─────────────────────────────────── */
+.prod-card-campos {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.prod-input {
   width: 100%;
-  min-width: 0;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-sm);
+  font-family: var(--font-ui);
+  color: var(--text);
+  background: var(--bg);
+  user-select: text;
+  transition: border-color var(--t), background var(--t);
 }
-.prod-edit-top {
-  display: grid;
-  grid-template-columns: 42px minmax(0, 1fr);
+
+.prod-input:focus {
+  outline: none;
+  border-color: var(--brown-light);
+  background: var(--surface);
+}
+
+.prod-nome {
+  padding: 7px 10px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.prod-preco-wrap {
+  display: flex;
   align-items: center;
-  gap: 9px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--bg);
+  overflow: hidden;
+  transition: border-color var(--t), background var(--t);
 }
-.prod-edit-bottom {
-  display: grid;
-  grid-template-columns: minmax(96px, 1fr) auto;
+
+.prod-preco-wrap:focus-within {
+  border-color: var(--brown-light);
+  background: var(--surface);
+}
+
+.prod-preco-label {
+  padding: 0 5px 0 10px;
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 700;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.prod-preco {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--brown);
+  padding: 7px 8px 7px 0;
+  outline: none;
+  user-select: text;
+  min-width: 0;
+}
+
+/* ── Botão lixeira discreto ──────────────────────────────── */
+.prod-card-del {
+  flex-shrink: 0;
+  align-self: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--r-sm);
+  border: 1.5px solid var(--border);
+  background: var(--red-bg);
+  color: var(--red);
+  display: flex;
   align-items: center;
-  gap: 8px;
-  padding-left: 51px;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0.45;
+  transition: opacity 0.2s, border-color 0.2s;
 }
 
-.prod-edit-icon-box { position: relative; width: 42px; height: 42px; flex-shrink: 0; }
-.prod-icon-img {
-  width: 42px; height: 42px; border-radius: var(--r-sm);
-  object-fit: cover; border: 1.5px solid var(--border);
-  cursor: pointer; background: var(--bg);
+.prod-card-del:active {
+  opacity: 1;
+  border-color: var(--red);
 }
-.btn-foto-trigger {
-  position: absolute; bottom: -4px; right: -4px;
-  width: 22px; height: 22px; border-radius: 50%;
-  border: 1.5px solid var(--border); background: var(--surface);
-  font-size: 10px; display: flex; align-items: center; justify-content: center;
-  cursor: pointer; box-shadow: var(--shadow); z-index: 2;
-}
-.btn-foto-trigger:active { transform: scale(0.9); }
 
-.prod-edit-emoji-input {
-  font-size: 23px; width: 42px; height: 42px; text-align: center;
-  flex-shrink: 0; background: var(--bg); border: 1.5px solid var(--border);
-  border-radius: var(--r-sm); cursor: pointer; padding: 0;
-  display: flex; align-items: center; justify-content: center;
+/* ── Confirmação inline de exclusão ──────────────────────── */
+.prod-confirm-del {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
-.prod-edit-emoji-input:focus { outline: none; border-color: var(--brown-light); background: var(--surface); }
-.prod-edit-nome {
-  width: 100%; border: 1.5px solid var(--border); border-radius: var(--r-sm);
-  padding: 8px 10px; font-family: var(--font-ui); font-size: 13px; font-weight: 700;
-  color: var(--text); background: var(--bg); user-select: text;
-  min-width: 0;
-}
-.prod-edit-nome:focus { outline: none; border-color: var(--brown-light); }
-.prod-edit-preco-wrap {
-  display: flex; align-items: center; gap: 5px;
-  border: 1.5px solid var(--border); border-radius: var(--r-sm);
-  background: var(--bg); padding: 0 10px;
-  min-width: 0;
-}
-.prod-edit-preco-label { font-size: 12px; color: var(--muted); font-weight: 600; }
-.prod-edit-preco {
-  width: 100%; min-width: 0; border: none; background: transparent;
-  font-family: var(--font-mono); font-size: 14px; font-weight: 700;
-  color: var(--brown); padding: 8px 0; outline: none; user-select: text;
-  text-align: right;
-}
-.taxa-row {
-  display: flex; align-items: center; gap: 10px;
-  padding: 12px 15px; border-bottom: 1px solid var(--border);
-}
-.taxa-row:last-child { border-bottom: none; }
-.taxa-label { flex: 1; font-size: 14px; font-weight: 700; }
-.taxa-input-wrap {
-  display: flex; align-items: center; gap: 4px;
-  background: var(--bg); border: 1.5px solid var(--border);
-  border-radius: var(--r-sm); padding: 0 10px;
-}
-.taxa-input {
-  width: 54px; border: none; background: transparent;
-  font-family: var(--font-mono); font-size: 15px; font-weight: 700;
-  color: var(--brown); padding: 8px 0; text-align: right; outline: none; user-select: text;
-}
-.taxa-percent { font-size: 13px; color: var(--muted); font-weight: 600; }
 
-.btn-remove-prod {
-  background: var(--red-bg); border: 1.5px solid transparent; color: var(--red);
-  border-radius: var(--r-sm); font-family: var(--font-ui);
-  font-size: 11px; font-weight: 800; cursor: pointer; padding: 8px 9px;
-  display: flex; align-items: center; justify-content: center;
-  gap: 4px; min-height: 36px; white-space: nowrap;
-  transition: border-color .2s, background .2s;
+.prod-confirm-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--red);
+  white-space: nowrap;
 }
-.btn-remove-prod:active { border-color: var(--red); background: #fff; }
 
+.prod-confirm-sim {
+  padding: 5px 10px;
+  border-radius: var(--r-sm);
+  border: none;
+  background: var(--red);
+  color: #fff;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.prod-confirm-sim:active {
+  opacity: 0.8;
+}
+
+.prod-confirm-nao {
+  padding: 5px 10px;
+  border-radius: var(--r-sm);
+  border: 1.5px solid var(--border2);
+  background: var(--surface);
+  color: var(--muted);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.prod-confirm-nao:active {
+  background: var(--cream);
+}
+
+/* ── Botões de ação da seção ─────────────────────────────── */
 .config-add-btn {
-  margin: 10px 15px 0; padding: 10px; border-radius: var(--r-sm);
-  border: 1.5px dashed var(--border2); background: transparent;
-  color: var(--muted); font-family: var(--font-ui); font-size: 13px;
-  font-weight: 700; cursor: pointer; width: calc(100% - 30px);
+  margin: 10px 12px 0;
+  padding: 10px;
+  border-radius: var(--r-sm);
+  border: 1.5px dashed var(--border2);
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  width: calc(100% - 24px);
   transition: all var(--t);
 }
-.config-add-btn:active { background: var(--cream); border-color: var(--brown-light); color: var(--brown); }
+
+.config-add-btn:active {
+  background: var(--cream);
+  border-color: var(--brown-light);
+  color: var(--brown);
+}
 
 .config-save-btn {
-  margin: 14px 15px 15px; padding: 12px; border-radius: var(--r-sm);
-  border: none; background: var(--brown); color: #fff;
-  font-family: var(--font-ui); font-size: 14px; font-weight: 800; cursor: pointer;
-  width: calc(100% - 30px); transition: opacity var(--t);
+  margin: 12px 12px 14px;
+  padding: 12px;
+  border-radius: var(--r-sm);
+  border: none;
+  background: var(--brown);
+  color: #fff;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  width: calc(100% - 24px);
+  transition: opacity var(--t);
 }
-.config-save-btn:active { opacity: .85; }
+
+.config-save-btn:active {
+  opacity: 0.85;
+}
+
+/* ── Taxas ───────────────────────────────────────────────── */
+.taxa-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 15px;
+  border-bottom: 1px solid var(--border);
+}
+
+.taxa-row:last-of-type {
+  border-bottom: none;
+}
+
+.taxa-label {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.taxa-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 0 10px;
+  transition: border-color var(--t);
+}
+
+.taxa-input-wrap:focus-within {
+  border-color: var(--brown-light);
+}
+
+.taxa-input {
+  width: 54px;
+  border: none;
+  background: transparent;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--brown);
+  padding: 8px 0;
+  text-align: right;
+  outline: none;
+  user-select: text;
+}
+
+.taxa-percent {
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+/* ── Sobre ───────────────────────────────────────────────── */
 .config-sobre-wrap {
-  padding: 16px 15px; display: flex; flex-direction: column;
-  gap: 4px; align-items: center; text-align: center;
+  padding: 16px 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+  text-align: center;
 }
+
 .config-sobre-emoji { font-size: 32px; margin-bottom: 4px; }
 .config-sobre-title { font-size: 15px; font-weight: 800; color: var(--brown); }
 .config-sobre-ver   { font-size: 12px; color: var(--muted); }
-.config-sobre-info  { font-size: 12px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
 
-@media (max-width: 374px) {
-  .config-body { padding-inline: 10px; }
-  .config-section-title { padding-inline: 12px; }
-  .prod-edit-row { padding-inline: 10px; }
-  .prod-edit-bottom { grid-template-columns: minmax(88px, 1fr) auto; gap: 6px; }
-  .btn-remove-prod { padding-inline: 8px; font-size: 10px; }
+.config-sobre-info {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 4px;
+  line-height: 1.5;
 }
 </style>
