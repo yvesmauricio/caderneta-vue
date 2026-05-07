@@ -33,6 +33,7 @@
   --font-ui:      'Plus Jakarta Sans', sans-serif;
   --font-mono:    'DM Mono', monospace;
   --t:            .18s ease;
+  --tap:          44px;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -45,6 +46,19 @@ html, body {
   color: var(--text);
   -webkit-tap-highlight-color: transparent;
   user-select: none;
+  touch-action: manipulation;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button,
+[role="button"] {
+  touch-action: manipulation;
 }
 
 #app {
@@ -152,7 +166,7 @@ html, body {
   flex: 1;
   border: none; background: transparent;
   font-family: var(--font-ui);
-  font-size: 14px; color: var(--text);
+  font-size: 16px; color: var(--text);
   padding: 11px 0; outline: none;
   user-select: text;
 }
@@ -180,6 +194,7 @@ html, body {
   box-shadow: var(--shadow);
   transition: border-color var(--t), background var(--t);
   flex-shrink: 0;
+  min-height: 64px;
 }
 .list-item:active { border-color: var(--brown-light); background: var(--cream); }
 
@@ -213,6 +228,7 @@ html, body {
   cursor: pointer;
   transition: transform .22s cubic-bezier(.4,0,.2,1);
   will-change: transform;
+  min-height: 64px;
 }
 .swipe-front.open { transform: translateX(-140px); border-color: var(--border2); }
 .swipe-front:active:not(.open) { background: var(--cream); border-color: var(--brown-light); }
@@ -225,9 +241,11 @@ html, body {
   flex: 1; border: none; color: #fff;
   display: flex; flex-direction: column; align-items: center;
   justify-content: center; gap: 2px;
-  font-family: var(--font-ui); font-size: 9px; font-weight: 800;
+  font-family: var(--font-ui); font-size: 10px; font-weight: 800;
   text-transform: uppercase; cursor: pointer;
   transition: opacity .2s;
+  min-width: 70px;
+  min-height: var(--tap);
 }
 .swipe-action-btn:active { opacity: .8; }
 .swipe-action-btn.edit { background: var(--brown-mid); border-radius: var(--r) 0 0 var(--r); }
@@ -282,12 +300,12 @@ html, body {
 .dialog-btns  { display: flex; gap: 10px; }
 
 .btn-cancel {
-  flex: 1; padding: 13px; border-radius: var(--r);
+  flex: 1; padding: 13px; min-height: var(--tap); border-radius: var(--r);
   border: 1.5px solid var(--border); background: var(--surface);
   color: var(--text); font-family: var(--font-ui); font-size: 14px; font-weight: 700; cursor: pointer;
 }
 .btn-confirm {
-  flex: 2; padding: 13px; border-radius: var(--r);
+  flex: 2; padding: 13px; min-height: var(--tap); border-radius: var(--r);
   border: none; background: var(--green); color: #fff;
   font-family: var(--font-ui); font-size: 14px; font-weight: 800; cursor: pointer;
 }
@@ -317,7 +335,7 @@ html, body {
 .modal-header { display: flex; align-items: center; justify-content: space-between; }
 .modal-titulo { font-size: 16px; font-weight: 800; }
 .btn-fechar {
-  width: 32px; height: 32px; border-radius: 50%;
+  width: var(--tap); height: var(--tap); border-radius: 50%;
   border: none; background: var(--border); color: var(--muted);
   font-size: 16px; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
@@ -328,7 +346,7 @@ html, body {
 .form-input, .form-select {
   width: 100%; padding: 12px 14px;
   border: 1.5px solid var(--border); border-radius: var(--r-sm);
-  font-family: var(--font-ui); font-size: 14px; color: var(--text);
+  font-family: var(--font-ui); font-size: 16px; color: var(--text);
   background: var(--surface); outline: none;
   user-select: text;
 }
@@ -336,7 +354,7 @@ html, body {
 .form-select { appearance: none; }
 
 .btn-primary {
-  width: 100%; padding: 15px; border-radius: var(--r); border: none;
+  width: 100%; padding: 15px; min-height: var(--tap); border-radius: var(--r); border: none;
   background: var(--brown); color: #fff;
   font-family: var(--font-ui); font-size: 15px; font-weight: 800; cursor: pointer;
   transition: opacity var(--t);
@@ -351,6 +369,7 @@ html, body {
   padding-bottom: env(safe-area-inset-bottom);
   z-index: 100;
   box-shadow: 0 -2px 12px rgba(61,32,8,.08);
+  min-height: calc(64px + env(safe-area-inset-bottom));
 }
 .nav-btn {
   flex: 1; display: flex; flex-direction: column;
@@ -358,6 +377,7 @@ html, body {
   padding: 10px 2px; border: none; background: transparent;
   color: var(--muted); font-family: var(--font-ui); font-size: 11px; font-weight: 700;
   cursor: pointer; transition: color var(--t); min-width: 0;
+  min-height: 64px;
 }
 .nav-btn.ativo { color: var(--brown); }
 
@@ -369,7 +389,7 @@ html, body {
 
 /* ── CHIP ───────────────────────────────────────────────── */
 .chip {
-  padding: 5px 12px; border-radius: var(--r-full);
+  min-height: 40px; padding: 8px 14px; border-radius: var(--r-full);
   border: 1.5px solid var(--border2); background: var(--surface);
   color: var(--muted); font-size: 11px; font-weight: 700;
   cursor: pointer; font-family: var(--font-ui); transition: all var(--t);

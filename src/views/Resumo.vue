@@ -60,10 +60,13 @@
           <div
             v-for="c in g.clientes" :key="c.clienteId"
             class="cli-card" :class="{ atrasado: c.atrasado }"
-            @click="abrirLoja(g)"
           >
             <!-- Cabeçalho do cliente -->
-            <div class="cli-header">
+            <div
+              class="cli-header"
+              :class="{ colapsado: clienteColapsado(g, c) }"
+              @click="alternarCliente(g, c)"
+            >
               <div class="cli-avatar" :class="{ atrasado: c.atrasado }">
                 {{ iniciais(c.clienteNome) }}
               </div>
@@ -75,31 +78,44 @@
                 <div class="cli-total" :class="{ 'cli-total--red': c.atrasado, 'cli-total--ok': modo === 'historico' && c.saldo <= 0.01 }">
                   R$ {{ fmt(modo === 'historico' ? c.totalCompras : c.saldo) }}
                 </div>
-                <div class="cli-btns">
-                  <button v-if="c.saldo > 0.01" class="btn-pagar-tudo" @click.stop="abrirPagarTudo(c)" title="Quitar tudo">
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                      <polyline points="20 6 9 17 4 12"/>
-                    </svg>
-                    Quitar
-                  </button>
-                  <button v-if="c.telefone" class="btn-zap" @click.stop="cobrarWhatsapp(c)" title="Cobrar no WhatsApp">
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
-                    </svg>
-                  </button>
-                </div>
               </div>
+              <svg class="cli-chevron" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M6 9l6 6 6-6"/>
+              </svg>
+            </div>
+
+            <div v-if="modo !== 'historico' || c.telefone" class="cli-btns" @click.stop>
+              <button v-if="modo !== 'historico'" class="btn-venda" @click="iniciarVenda(g, c)" title="Iniciar venda">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                Venda
+              </button>
+              <button v-if="modo !== 'historico' && c.saldo > 0.01" class="btn-pagar-tudo" @click="abrirPagarTudo(c)" title="Quitar tudo">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                Quitar
+              </button>
+              <button v-if="c.telefone" class="btn-zap" @click="abrirWhatsapp(c)" title="Abrir WhatsApp">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+                </svg>
+              </button>
             </div>
 
             <!-- Compras — estilo linha de caderno -->
-            <div class="compras-lista">
+            <div class="compras-lista" :class="{ colapsado: clienteColapsado(g, c) }">
               <div
                 v-for="f in c.fiados" :key="f.id"
                 class="compra-row" :class="{ atrasada: f.atrasada }"
               >
                 <div class="compra-esq">
-                  <span class="compra-data">{{ fmtBR(f.dataVenda) }}</span>
+                  <span class="compra-data">{{ fmtDataHora(f) }}</span>
                   <span class="compra-itens">{{ resumoItens(f.itens) }}</span>
+                  <span v-if="f.pagamentos?.length" class="compra-pagamentos">
+                    Recebido R$ {{ fmt(totalPago(f)) }} · {{ textoUltimoRecebimento(f) }} · falta R$ {{ fmt(f.saldo) }}
+                  </span>
                 </div>
                 <div class="compra-dir">
                   <span class="compra-valor" :class="{ 'compra-valor--red': f.atrasada }">
@@ -115,7 +131,7 @@
                     <span v-else-if="f.dataVenc" class="compra-vence" :class="{ 'compra-vence--red': f.atrasada }">
                       {{ f.atrasada ? '⚠️ ' : '' }}{{ fmtBR(f.dataVenc) }}
                     </span>
-                    <div class="compra-acoes">
+                    <div v-if="modo !== 'historico'" class="compra-acoes">
                       <button v-if="f.saldo > 0.01" class="btn-receber" @click.stop="abrirReceber(f)" title="Receber parcial">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                           <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 1 0 0 7h5a3.5 3.5 0 1 1 0 7H6"/>
@@ -202,7 +218,7 @@ import { appStore } from '../stores/appStore.js'
 
 const { getAll, update, del } = useDB()
 const { toast } = useToast()
-const emit = defineEmits(['abrir-loja'])
+const emit = defineEmits(['abrir-cliente'])
 
 const fiadosTodos   = ref([])
 const clientesTodos = ref([])
@@ -213,6 +229,7 @@ const fiadoExcluir  = ref(null)
 const clienteQuitar = ref(null)
 const valorReceber  = ref(0)
 const lojasExpandidas = ref(new Set())
+const clientesExpandidos = ref(new Set())
 
 const fmt = v => Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const hoje = () => new Date().toLocaleDateString('sv')
@@ -221,6 +238,7 @@ const fmtBR = raw => {
   const b = String(raw).split('T')[0]
   return /^\d{4}-\d{2}-\d{2}$/.test(b) ? b.split('-').reverse().join('/') : '--/--'
 }
+const fmtHora = raw => /^\d{2}:\d{2}/.test(String(raw || '')) ? String(raw).slice(0, 5) : ''
 const iniciais = nome => (nome || '?').trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase()
 
 const fiadosAbertos = computed(() => fiadosTodos.value.filter(f => f.saldo > 0.01))
@@ -250,9 +268,25 @@ function ultimoPagamento(f) {
 
 function textoPagamento(f) {
   const ultimo = ultimoPagamento(f)
-  if (ultimo?.data) return `Pago ${fmtBR(ultimo.data)}`
+  if (ultimo?.data) return `Pago ${fmtBR(ultimo.data)}${fmtHora(ultimo.hora) ? ` ${fmtHora(ultimo.hora)}` : ''}`
   if (f.pagoEm) return `Pago ${fmtBR(f.pagoEm)}`
   return 'Pago'
+}
+
+function fmtDataHora(f) {
+  const hora = fmtHora(f.horaVenda)
+  return hora ? `${fmtBR(f.dataVenda)} ${hora}` : fmtBR(f.dataVenda)
+}
+
+function totalPago(f) {
+  return (f.pagamentos || []).reduce((s, p) => s + Number(p.valor || 0), 0)
+}
+
+function textoUltimoRecebimento(f) {
+  const ultimo = ultimoPagamento(f)
+  if (!ultimo) return ''
+  const hora = fmtHora(ultimo.hora)
+  return `último ${fmtBR(ultimo.data)}${hora ? ` ${hora}` : ''}`
 }
 
 function montarGrupos() {
@@ -298,7 +332,11 @@ function montarGrupos() {
   return [...porLoja.values()].map(g => {
     const clientes = [...g.clientes.values()].map(c => ({
       ...c,
-      fiados: c.fiados.sort((a, b) => String(b.dataVenda || '').localeCompare(String(a.dataVenda || ''))),
+      fiados: c.fiados.sort((a, b) => {
+        const da = `${a.dataVenda || ''} ${a.horaVenda || '00:00'}`
+        const db = `${b.dataVenda || ''} ${b.horaVenda || '00:00'}`
+        return String(db).localeCompare(String(da))
+      }),
       totalCompras: c.fiados.reduce((s, f) => s + Number(f.total || 0), 0)
     })).sort((a, b) => a.clienteNome.localeCompare(b.clienteNome))
     return {
@@ -310,16 +348,24 @@ function montarGrupos() {
   }).sort((a, b) => a.lojaNome.localeCompare(b.lojaNome))
 }
 
-function dadosPagamento(valor) {
+function horaAtual() {
+  return new Date().toTimeString().slice(0, 5)
+}
+
+function dadosPagamento(valor, saldoAntes, saldoDepois) {
   return {
     valor,
     data: hoje(),
+    hora: horaAtual(),
+    saldoAntes,
+    saldoDepois,
     criadoEm: new Date().toISOString()
   }
 }
 
 function mudancasPagamento(f, pago, novoSaldo) {
-  const pagamentos = [...(f.pagamentos || []), dadosPagamento(pago)]
+  const saldoAntes = Number(f.saldo || 0)
+  const pagamentos = [...(f.pagamentos || []), dadosPagamento(pago, saldoAntes, novoSaldo)]
   const quitado = novoSaldo <= 0.01
   return {
     saldo: novoSaldo,
@@ -338,18 +384,22 @@ function resumoItens(itens) {
   }).join(' · ')
 }
 
-function cobrarWhatsapp(c) {
+function abrirWhatsapp(c) {
   const tel = c.telefone.replace(/\D/g, '')
-  const msg = encodeURIComponent(`Olá ${c.clienteNome}! Você tem um fiado de R$ ${fmt(c.saldo)} em aberto. Quando podemos acertar? 😊`)
+  const msg = modo.value === 'historico'
+    ? encodeURIComponent(`Olá ${c.clienteNome}!`)
+    : encodeURIComponent(`Olá ${c.clienteNome}! Você tem um fiado de R$ ${fmt(c.saldo)} em aberto. Quando podemos acertar? 😊`)
   window.open(`https://wa.me/55${tel}?text=${msg}`, '_blank')
 }
 
 function abrirReceber(fiado) {
+  if (modo.value === 'historico') return
   fiadoReceber.value = fiado
   valorReceber.value = fiado.saldo
 }
 
 async function receberPagamento() {
+  if (modo.value === 'historico') return
   const f = fiadoReceber.value
   if (!f || !valorReceber.value || valorReceber.value <= 0) return
   const pago = Math.min(valorReceber.value, f.saldo)
@@ -361,11 +411,20 @@ async function receberPagamento() {
 }
 
 function abrirPagarTudo(cliente) {
+  if (modo.value === 'historico') return
   clienteQuitar.value = cliente
+}
+
+function clienteKey(grupo, cliente) {
+  return `${grupo.lojaId}:${cliente.clienteId}`
 }
 
 function lojaColapsada(grupo) {
   return !busca.value.trim() && !lojasExpandidas.value.has(grupo.lojaId)
+}
+
+function clienteColapsado(grupo, cliente) {
+  return !busca.value.trim() && !clientesExpandidos.value.has(clienteKey(grupo, cliente))
 }
 
 function alternarLoja(grupo) {
@@ -378,15 +437,35 @@ function alternarLoja(grupo) {
   lojasExpandidas.value = proximas
 }
 
-function abrirLoja(grupo) {
-  emit('abrir-loja', {
-    id: grupo.lojaId,
-    nome: grupo.lojaNome,
-    referencia: ''
+function alternarCliente(grupo, cliente) {
+  const key = clienteKey(grupo, cliente)
+  const proximos = new Set(clientesExpandidos.value)
+  if (proximos.has(key)) {
+    proximos.delete(key)
+  } else {
+    proximos.add(key)
+  }
+  clientesExpandidos.value = proximos
+}
+
+function iniciarVenda(grupo, cliente) {
+  emit('abrir-cliente', {
+    loja: {
+      id: grupo.lojaId,
+      nome: grupo.lojaNome,
+      referencia: ''
+    },
+    cliente: {
+      id: cliente.clienteId,
+      nome: cliente.clienteNome,
+      telefone: cliente.telefone,
+      lojaId: grupo.lojaId
+    }
   })
 }
 
 async function quitarTudo() {
+  if (modo.value === 'historico') return
   const c = clienteQuitar.value
   if (!c) return
   await Promise.all(c.fiados.map(f => update('fiados', f.id, mudancasPagamento(f, f.saldo, 0))))
@@ -396,10 +475,12 @@ async function quitarTudo() {
 }
 
 function confirmarExcluir(fiado) {
+  if (modo.value === 'historico') return
   fiadoExcluir.value = fiado
 }
 
 async function excluirFiado() {
+  if (modo.value === 'historico') return
   await del('fiados', fiadoExcluir.value.id)
   fiadoExcluir.value = null
   toast('🗑️ Fiado removido', 'sucesso')
@@ -463,7 +544,7 @@ defineExpose({ carregar })
   border-left: 3px solid var(--brown); box-shadow: var(--shadow);
   /*position: sticky; top: 0;*/ 
   z-index: 2; cursor: pointer; user-select: none;
-  min-height: 40px;
+  min-height: 48px;
 }
 .loja-header:active { opacity: .8; }
 .loja-ico   { color: var(--brown); flex-shrink: 0; }
@@ -495,11 +576,13 @@ defineExpose({ carregar })
 
 .cli-header {
   display: flex; align-items: center; gap: 10px;
-  padding: 10px 12px; min-height: 60px;
+  padding: 12px; min-height: 68px;
+  cursor: pointer; user-select: none;
 }
+.cli-header:active { background: var(--cream); }
 
 .cli-avatar {
-  width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+  width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
   background: var(--cream-deep); color: var(--brown-mid);
   font-size: 12px; font-weight: 800;
   display: flex; align-items: center; justify-content: center;
@@ -509,38 +592,71 @@ defineExpose({ carregar })
 
 .cli-info { flex: 1; min-width: 0; }
 .cli-nome { font-size: 14px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.cli-tel  { font-size: 11px; color: var(--muted); margin-top: 1px; }
+.cli-tel  { font-size: 11px; color: var(--muted); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-.cli-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
+.cli-actions { display: flex; align-items: center; justify-content: flex-end; flex-shrink: 0; }
 .cli-total   { font-size: 15px; font-weight: 800; font-family: var(--font-mono); white-space: nowrap; }
 .cli-total--red { color: var(--red); }
 .cli-total--ok { color: var(--green); }
-.cli-btns    { display: flex; gap: 5px; align-items: center; }
+.cli-btns {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+  padding: 0 12px 12px 64px;
+}
+.cli-chevron { color: var(--brown-light); flex-shrink: 0; transition: transform .22s cubic-bezier(.4,0,.2,1); }
+.cli-header.colapsado .cli-chevron { transform: rotate(-90deg); }
 
+.btn-venda,
 .btn-pagar-tudo {
-  height: 28px; padding: 0 10px; border-radius: var(--r-full); border: none;
-  background: var(--brown); color: #fff; font-size: 11px; font-weight: 700;
+  min-height: 40px; padding: 0 12px; border-radius: var(--r-full); border: none;
+  color: #fff; font-size: 12px; font-weight: 800;
   cursor: pointer; font-family: var(--font-ui);
   display: flex; align-items: center; gap: 4px; white-space: nowrap;
 }
+.btn-venda { background: var(--green); }
+.btn-pagar-tudo { background: var(--brown); }
+.btn-venda:active,
 .btn-pagar-tudo:active { opacity: .8; }
 
 .btn-zap {
-  width: 28px; height: 28px; border-radius: 50%; border: none;
+  width: 44px; height: 44px; border-radius: 50%; border: none;
   background: #25D366; color: #fff;
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; flex-shrink: 0;
 }
 .btn-zap:active { opacity: .8; }
 
+@media (max-width: 380px) {
+  .cli-btns {
+    padding-left: 12px;
+  }
+
+  .btn-venda,
+  .btn-pagar-tudo {
+    flex: 1 1 0;
+    justify-content: center;
+    padding: 0 10px;
+  }
+}
+
 /* ── Compras (linhas de caderno) ────────────────── */
-.compras-lista { border-top: 1.5px dashed var(--border2); }
+.compras-lista {
+  border-top: 1.5px dashed var(--border2);
+  overflow: hidden;
+  transition: max-height .28s cubic-bezier(.4,0,.2,1), opacity .22s ease;
+  max-height: 9999px;
+  opacity: 1;
+}
+.compras-lista.colapsado { max-height: 0 !important; opacity: 0; border-top-color: transparent; }
 
 .compra-row {
   display: flex; align-items: flex-start; justify-content: space-between;
-  padding: 8px 12px; gap: 8px;
+  padding: 10px 12px; gap: 10px;
   border-bottom: 1px dashed var(--border);
-  min-height: 52px; /* altura mínima fixa — evita espremimento */
+  min-height: 60px;
 }
 .compra-row:last-child { border-bottom: none; }
 .compra-row.atrasada   { background: #fff5f5; }
@@ -550,6 +666,7 @@ defineExpose({ carregar })
 }
 .compra-data  { font-size: 11px; font-weight: 700; color: var(--brown-mid); white-space: nowrap; }
 .compra-itens { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.compra-pagamentos { font-size: 11px; color: var(--green); font-weight: 700; line-height: 1.35; }
 
 /* Coluna direita com largura fixa — resolve o espremimento */
 .compra-dir {
@@ -572,10 +689,10 @@ defineExpose({ carregar })
 .compra-vence--red { color: var(--red); font-weight: 700; }
 .compra-vence--ok { color: var(--green); font-weight: 700; }
 
-.compra-acoes { display: flex; gap: 4px; }
+.compra-acoes { display: flex; gap: 8px; }
 
 .btn-receber {
-  width: 30px; height: 30px; border-radius: 50%; border: none;
+  width: 44px; height: 44px; border-radius: 50%; border: none;
   background: var(--green); color: #fff;
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; flex-shrink: 0;
@@ -583,7 +700,7 @@ defineExpose({ carregar })
 .btn-receber:active { opacity: .8; }
 
 .btn-excluir-compra {
-  width: 30px; height: 30px; border-radius: 50%;
+  width: 44px; height: 44px; border-radius: 50%;
   border: 1.5px solid var(--border2); background: var(--surface);
   color: var(--red); display: flex; align-items: center; justify-content: center;
   cursor: pointer; flex-shrink: 0;
@@ -595,7 +712,7 @@ defineExpose({ carregar })
 .form-label { font-size: 12px; font-weight: 700; color: var(--muted); }
 .form-input {
   width: 100%; padding: 12px 14px; border: 1.5px solid var(--border);
-  border-radius: var(--r-sm); font-family: var(--font-ui); font-size: 14px;
+  border-radius: var(--r-sm); font-family: var(--font-ui); font-size: 16px;
   color: var(--text); background: var(--surface); outline: none; user-select: text;
 }
 .form-input:focus { border-color: var(--brown-light); }

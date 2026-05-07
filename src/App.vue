@@ -47,7 +47,7 @@
           key="lancar"
           :loja="loja"
           :cliente="cliente"
-          @back="irPara('clientes', 'back')"
+          @back="voltarLancar"
           @salvo="onFiadoSalvo"
         />
 
@@ -56,7 +56,7 @@
           v-else-if="tela === 'resumo'"
           key="resumo"
           ref="resumoRef"
-          @abrir-loja="onAbrirLojaResumo"
+          @abrir-cliente="onAbrirClienteResumo"
         />
 
         <!-- Calculadora -->
@@ -252,11 +252,12 @@ function onEscolherLoja(l) {
   irPara('clientes')
 }
 
-function onAbrirLojaResumo(l) {
+function onAbrirClienteResumo(payload) {
   origemClientes.value = 'resumo'
   navAtivo.value = 'resumo'
-  loja.value = l
-  irPara('clientes')
+  loja.value = payload.loja
+  cliente.value = payload.cliente
+  irPara('lancar')
 }
 
 function onEscolherCliente(c) {
@@ -275,8 +276,19 @@ async function voltarClientes() {
   irPara('lojas', 'back')
 }
 
-async function onFiadoSalvo() {
+async function voltarLancar() {
+  if (origemClientes.value === 'resumo') {
+    navAtivo.value = 'resumo'
+    irPara('resumo', 'back')
+    await nextTick()
+    resumoRef.value?.carregar()
+    return
+  }
   irPara('clientes', 'back')
+}
+
+async function onFiadoSalvo() {
+  await voltarLancar()
 }
 
 // ── Primeira loja ───────────────────────────────────────────

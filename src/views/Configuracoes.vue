@@ -592,6 +592,7 @@ async function importarBackup(e) {
   gap: 10px;
   width: 100%;
   padding: 12px;
+  min-height: 56px;
   border: 1.5px solid var(--border);
   border-radius: var(--r-sm);
   background: var(--surface);
@@ -643,8 +644,9 @@ async function importarBackup(e) {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 12px;
+  padding: 12px;
   border-bottom: 1px solid var(--border);
+  min-height: 84px;
 }
 
 .prod-card:last-child {
@@ -659,8 +661,8 @@ async function importarBackup(e) {
 
 .prod-foto {
   display: block;
-  width: 42px;
-  height: 42px;
+  width: 48px;
+  height: 48px;
   border-radius: var(--r-sm);
   object-fit: cover;
   border: 1.5px solid var(--border);
@@ -670,8 +672,8 @@ async function importarBackup(e) {
 
 .prod-emoji-input {
   display: block;
-  width: 42px;
-  height: 42px;
+  width: 48px;
+  height: 48px;
   font-size: 22px;
   text-align: center;
   background: var(--bg);
@@ -690,14 +692,14 @@ async function importarBackup(e) {
 
 .btn-foto {
   position: absolute;
-  bottom: -4px;
-  right: -4px;
-  width: 20px;
-  height: 20px;
+  bottom: -12px;
+  right: -12px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   border: 1.5px solid var(--border);
   background: var(--surface);
-  font-size: 9px;
+  font-size: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -737,8 +739,8 @@ async function importarBackup(e) {
 }
 
 .prod-nome {
-  padding: 7px 10px;
-  font-size: 13px;
+  padding: 10px 12px;
+  font-size: 16px;
   font-weight: 700;
 }
 
@@ -771,10 +773,10 @@ async function importarBackup(e) {
   border: none;
   background: transparent;
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 700;
   color: var(--brown);
-  padding: 7px 8px 7px 0;
+  padding: 10px 8px 10px 0;
   outline: none;
   user-select: text;
   min-width: 0;
@@ -784,8 +786,8 @@ async function importarBackup(e) {
 .prod-card-del {
   flex-shrink: 0;
   align-self: center;
-  width: 30px;
-  height: 30px;
+  width: 44px;
+  height: 44px;
   border-radius: var(--r-sm);
   border: 1.5px solid var(--border);
   background: var(--red-bg);
@@ -794,7 +796,7 @@ async function importarBackup(e) {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  opacity: 0.45;
+  opacity: 0.75;
   transition: opacity 0.2s, border-color 0.2s;
 }
 
@@ -808,7 +810,9 @@ async function importarBackup(e) {
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .prod-confirm-label {
@@ -819,13 +823,14 @@ async function importarBackup(e) {
 }
 
 .prod-confirm-sim {
-  padding: 5px 10px;
+  min-height: 40px;
+  padding: 8px 12px;
   border-radius: var(--r-sm);
   border: none;
   background: var(--red);
   color: #fff;
   font-family: var(--font-ui);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 800;
   cursor: pointer;
   transition: opacity 0.2s;
@@ -836,13 +841,14 @@ async function importarBackup(e) {
 }
 
 .prod-confirm-nao {
-  padding: 5px 10px;
+  min-height: 40px;
+  padding: 8px 12px;
   border-radius: var(--r-sm);
   border: 1.5px solid var(--border2);
   background: var(--surface);
   color: var(--muted);
   font-family: var(--font-ui);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 800;
   cursor: pointer;
   transition: background 0.2s;
@@ -855,7 +861,8 @@ async function importarBackup(e) {
 /* ── Botões de ação da seção ─────────────────────────────── */
 .config-add-btn {
   margin: 10px 12px 0;
-  padding: 10px;
+  padding: 12px;
+  min-height: 44px;
   border-radius: var(--r-sm);
   border: 1.5px dashed var(--border2);
   background: transparent;
@@ -877,6 +884,7 @@ async function importarBackup(e) {
 .config-save-btn {
   margin: 12px 12px 14px;
   padding: 12px;
+  min-height: 44px;
   border-radius: var(--r-sm);
   border: none;
   background: var(--brown);

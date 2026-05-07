@@ -11,10 +11,16 @@
         <div class="header-date-tags">
           <span class="tag-label-venda">Quando foi a venda?</span>
           <span class="tag-date-venda" @click="showDatePicker">{{ dataVendaFormatada }}</span>
+          <span class="tag-date-venda" @click="showTimePicker">{{ horaVenda }}</span>
           <input
             type="date" ref="datePickerRef"
             style="position:absolute;opacity:0;pointer-events:none;width:0;height:0"
             v-model="dataVenda"
+          >
+          <input
+            type="time" ref="timePickerRef"
+            style="position:absolute;opacity:0;pointer-events:none;width:0;height:0"
+            v-model="horaVenda"
           >
         </div>
       </div>
@@ -106,9 +112,11 @@ const { toast } = useToast()
 const produtos    = computed(() => appStore.produtos)
 const qtds        = reactive({})
 const dataVenda   = ref(new Date().toLocaleDateString('sv'))
+const horaVenda   = ref(horaAtual())
 const dataVenc    = ref('')
 const chipAtivo   = ref(null)
 const datePickerRef = ref(null)
+const timePickerRef = ref(null)
 
 const chips = [
   { id: '5dia', label: '5º Dia Útil' },
@@ -119,6 +127,7 @@ const chips = [
 watch(() => props.cliente, () => {
   produtos.value.forEach(p => { qtds[p.id] = 0 })
   dataVenda.value = new Date().toLocaleDateString('sv')
+  horaVenda.value = horaAtual()
   dataVenc.value  = ''
   chipAtivo.value = null
 }, { immediate: true })
@@ -136,6 +145,10 @@ function showDatePicker() {
   datePickerRef.value?.showPicker?.()
 }
 
+function showTimePicker() {
+  timePickerRef.value?.showPicker?.()
+}
+
 function inc(p) { qtds[p.id] = (qtds[p.id] || 0) + 1 }
 function dec(p) { if (qtds[p.id] > 0) qtds[p.id]-- }
 
@@ -144,6 +157,9 @@ function fmt(v) {
 }
 function fmtPreco(v) {
   return Number(v||0).toLocaleString('pt-BR', { minimumFractionDigits:2, maximumFractionDigits:2 })
+}
+function horaAtual() {
+  return new Date().toTimeString().slice(0, 5)
 }
 function initials(nome) {
   if (!nome) return '?'
@@ -193,6 +209,7 @@ async function salvar() {
     saldo:       total.value,
     status:      'aberto',
     dataVenda:   dataVenda.value,
+    horaVenda:   horaVenda.value || null,
     dataVenc:    dataVenc.value || null,
     criadoEm:    new Date().toISOString(),
   }
@@ -219,8 +236,9 @@ async function salvar() {
 .tag-date-venda {
   background: var(--gold-bg); color: var(--gold);
   border: 1px solid rgba(200,137,10,0.3);
-  padding: 4px 10px; border-radius: 6px;
+  min-height: 40px; padding: 8px 12px; border-radius: 8px;
   font-size: 12px; font-weight: 800; cursor: pointer;
+  display: inline-flex; align-items: center;
 }
 .lancar-body {
   flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
@@ -245,9 +263,9 @@ async function salvar() {
 .date-label    { font-size: 11px; font-weight: 700; color: var(--muted); margin-bottom: 8px; }
 .date-field    { display: flex; flex-direction: column; gap: 4px; }
 .date-input {
-  width: 100%; padding: 10px 12px;
+  width: 100%; padding: 12px 14px; min-height: 44px;
   border: 1.5px solid var(--border); border-radius: var(--r-sm);
-  font-family: var(--font-ui); font-size: 13px; color: var(--text);
+  font-family: var(--font-ui); font-size: 16px; color: var(--text);
   background: var(--surface); outline: none; box-shadow: var(--shadow);
 }
 .date-input:focus { border-color: var(--brown-light); }

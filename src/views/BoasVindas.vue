@@ -90,6 +90,7 @@ defineEmits(['nova-loja', 'restaurar', 'restaurar-drive'])
 
 .btn-secundario {
   width: 100%;
+  min-height: 44px;
   padding: 13px;
   border-radius: var(--r);
   border: 1.5px solid var(--border2);

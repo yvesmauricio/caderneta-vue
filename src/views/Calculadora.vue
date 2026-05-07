@@ -143,6 +143,7 @@ function formatarMoeda(e) {
   font-family: var(--font-mono); font-size: 36px; font-weight: 700;
   color: var(--brown); outline: none; caret-color: var(--gold);
   user-select: text;
+  min-height: 52px;
 }
 .calc-input-field::placeholder { color: var(--border2); }
 .calc-divider { height: 1px; background: var(--border); margin: 0 -18px; }
@@ -175,7 +176,7 @@ function formatarMoeda(e) {
 }
 .calc-info-box p { font-size: 12px; color: var(--brown-mid); line-height: 1.55; }
 .calc-clear-btn {
-  align-self: center; padding: 10px 24px;
+  align-self: center; min-height: 44px; padding: 10px 24px;
   border-radius: var(--r-full); border: 1.5px solid var(--border2);
   background: var(--surface); color: var(--muted);
   font-family: var(--font-ui); font-size: 13px; font-weight: 700; cursor: pointer;

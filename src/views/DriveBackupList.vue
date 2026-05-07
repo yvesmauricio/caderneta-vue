@@ -46,6 +46,7 @@ defineEmits(['restore'])
   gap: 10px;
   width: 100%;
   padding: 12px;
+  min-height: 56px;
   border: 1.5px solid var(--border);
   border-radius: var(--r-sm);
   background: var(--surface);
