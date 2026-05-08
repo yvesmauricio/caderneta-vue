@@ -19,15 +19,18 @@
       </div>
     </div>
 
-    <div class="scroll-list">
+    <div class="scroll-list" @scroll="handleScroll">
       <div v-if="!filtradas.length" class="empty">
         <div class="empty-ico">🏪</div>
         <p>{{ busca ? 'Nenhuma loja encontrada' : 'Nenhuma loja cadastrada ainda.\nToque em + para adicionar.' }}</p>
       </div>
       <SwipeItem
+        ref="itemsRef"
+        :id="l.id"
         v-for="l in filtradas" :key="l.id"
         @click="escolher(l)"
         @edit="abrirModal(l)"
+        @opened="fecharOutros(l.id)"
         @delete="confirmarExclusao(l)"
       >
         <div class="list-icon">🏪</div>
@@ -93,6 +96,16 @@ const modal      = ref(null)
 const form       = ref({ nome: '', referencia: '' })
 const editando   = ref(null)
 const paraExcluir = ref(null)
+const itemsRef    = ref([])
+
+function handleScroll() {
+  // Fecha menus abertos ao rolar a lista de lojas
+  itemsRef.value.forEach(item => item?.close?.())
+}
+
+function fecharOutros(id) {
+  itemsRef.value.forEach(item => { if (item && item.id !== id) item.close?.() })
+}
 
 const filtradas = computed(() =>
   lojas.value

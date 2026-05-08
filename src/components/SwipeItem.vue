@@ -32,7 +32,8 @@
 <script setup>
 import { ref } from 'vue'
 
-const emit = defineEmits(['click', 'edit', 'delete'])
+const props = defineProps({ id: [String, Number] })
+const emit = defineEmits(['click', 'edit', 'delete', 'opened'])
 const isOpen = ref(false)
 
 let startX = 0
@@ -59,7 +60,11 @@ function onTouchMove(e) {
 function onTouchEnd(e) {
   if (!isDragging) return
   const dx = e.changedTouches[0].clientX - startX
-  if (dx < -40) isOpen.value = true
+  if (dx < -40) {
+    isOpen.value = true
+    if (navigator.vibrate) navigator.vibrate(10); // Resposta tátil ao abrir
+    emit('opened')
+  }
   else if (dx > 20) isOpen.value = false
   isDragging = false
 }
@@ -72,5 +77,9 @@ function handleClick() {
   }
 }
 
-defineExpose({ close: () => { isOpen.value = false } })
+defineExpose({ 
+  close: () => { isOpen.value = false },
+  id: props.id,
+  isOpen 
+})
 </script>

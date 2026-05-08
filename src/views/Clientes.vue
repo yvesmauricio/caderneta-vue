@@ -36,10 +36,12 @@
       <div :style="{ height: totalHeight + 'px', position: 'relative' }">
         <SwipeItem
           ref="itemsRef"
+          :id="c.id"
           v-for="c in visiveis" :key="c.id"
           :style="{ position: 'absolute', top: c._top + 'px', left: 0, right: 0 }"
           @click="escolher(c)"
           @edit="abrirModal(c)"
+          @opened="fecharOutros(c.id)"
           @delete="confirmarExclusao(c)"
         >
           <div class="list-icon pessoa">👩</div>
@@ -65,8 +67,22 @@
           </div>
           <div class="form-group">
             <label class="form-label">Telefone / WhatsApp</label>
-            <input class="form-input" v-model="form.telefone" placeholder="(11) 99999-9999" type="tel">
+            <input 
+              class="form-input" 
+              v-model="form.telefone" 
+              @input="onTelefoneInput"
+              placeholder="(11) 9 9999-9999" 
+              type="tel"
+            >
           </div>
+
+          <button v-if="suportaContatos" class="btn-secundario-contato" @click="importarContato">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+            Importar dos Contatos
+          </button>
+
           <button class="btn-primary" @click="salvar" :disabled="!form.nome.trim()">
             {{ editando ? 'Salvar Alterações' : 'Cadastrar Cliente' }}
           </button>
@@ -121,6 +137,38 @@ function handleScroll(e) {
   itemsRef.value.forEach(item => item?.close?.())
 }
 
+function fecharOutros(id) {
+  itemsRef.value.forEach(item => { if (item && item.id !== id) item.close?.() })
+}
+
+function aplicarMascara(v) {
+  if (!v) return ''
+  v = v.replace(/\D/g, '') // Remove tudo que não é dígito
+  if (v.length > 11) v = v.slice(0, 11) // Limita a 11 dígitos
+
+  if (v.length === 11) {
+    // Formato: (11) 9 9999-9999
+    return v.replace(/(\d{2})(\d{1})(\d{4})(\d{4})/, '($1) $2 $3-$4')
+  }
+  if (v.length > 6) {
+    // Formato: (11) 9999-9999
+    return v.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3')
+  }
+  if (v.length > 2) {
+    // Formato: (11) 9
+    return v.replace(/(\d{2})(\d{0,5})/, '($1) $2')
+  }
+  if (v.length > 0) {
+    // Formato: (11
+    return v.replace(/(\d{0,2})/, '($1')
+  }
+  return v
+}
+
+function onTelefoneInput(e) {
+  form.value.telefone = aplicarMascara(e.target.value)
+}
+
 const totalHeight = computed(() => filtrados.value.length * ITEM_HEIGHT)
 
 const filtrados = computed(() =>
@@ -139,6 +187,35 @@ const visiveis = computed(() => {
   }))
 })
 
+// Verificação de suporte para a Contact Picker API
+// 1. Requer HTTPS (ou localhost)
+// 2. Disponível principalmente no Chrome para Android
+// 3. Não aparece em iPhones (iOS) ou Navegadores de PC
+const suportaContatos = ('contacts' in navigator && !!navigator.contacts.select)
+
+async function importarContato() {
+  try {
+    const props = ['name', 'tel']
+    const opts = { multiple: false }
+    const contacts = await navigator.contacts.select(props, opts)
+    
+    if (contacts.length > 0) {
+      const contact = contacts[0]
+      if (contact.name?.length) form.value.nome = contact.name[0]
+      if (contact.tel?.length) {
+        // Remove +55, espaços, parênteses e traços para limpar o número
+        let num = contact.tel[0].replace(/\D/g, '')
+        if (num.startsWith('55')) num = num.substring(2)
+        form.value.telefone = aplicarMascara(num)
+      }
+      toast('👤 Contato importado!', 'sucesso')
+    }
+  } catch (err) {
+    // Usuário cancelou ou navegador bloqueou
+    console.warn('Busca de contatos cancelada')
+  }
+}
+
 async function carregar() {
   if (!props.loja) return
   clientes.value = await getAll('clientes', 'lojaId', IDBKeyRange.only(props.loja.id))
@@ -149,7 +226,7 @@ watch(() => props.loja, carregar, { immediate: true })
 
 function abrirModal(cli = null) {
   editando.value = cli ? cli.id : null
-  form.value = { nome: cli?.nome || '', telefone: cli?.telefone || '' }
+  form.value = { nome: cli?.nome || '', telefone: aplicarMascara(cli?.telefone || '') }
   modal.value = true
 }
 
@@ -182,4 +259,14 @@ function escolher(cli) { emit('escolher', cli) }
 
 <style scoped>
 .tela-clientes { display: flex; flex-direction: column; height: 100%; background: var(--bg); }
+
+.btn-secundario-contato {
+  width: 100%; min-height: 44px; padding: 10px; margin-bottom: 16px;
+  border-radius: var(--r); border: 1.5px dashed var(--border2);
+  background: var(--surface); color: var(--brown);
+  font-family: var(--font-ui); font-size: 13px; font-weight: 700;
+  cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: background var(--t);
+}
+.btn-secundario-contato:active { background: var(--cream); border-color: var(--brown-light); }
 </style>

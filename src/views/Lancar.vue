@@ -9,7 +9,7 @@
       <div class="topbar-title">
         Lançar Fiado
         <div class="header-date-tags">
-          <span class="tag-label-venda">Quando foi a venda?</span>
+          <span class="tag-label-venda">Venda:</span>
           <span class="tag-date-venda" @click="showDatePicker">{{ dataVendaFormatada }}</span>
           <span class="tag-date-venda" @click="showTimePicker">{{ horaVenda }}</span>
           <input
@@ -227,19 +227,22 @@ async function salvar() {
   position: relative;
 }
 .header-date-tags {
-  display: flex; align-items: center; justify-content: center; gap: 5px; margin-top: 4px;
+  display: flex; align-items: center; justify-content: center; gap: 4px; margin-top: 2px;
 }
 .tag-label-venda {
-  font-size: 10px; font-weight: 700; color: var(--muted);
-  text-transform: uppercase; background: var(--cream-deep); padding: 2px 6px; border-radius: 4px;
+  font-size: 9px; font-weight: 700; color: var(--muted);
+  text-transform: uppercase; background: none; padding: 0;
+  opacity: 0.8;
 }
 .tag-date-venda {
   background: var(--gold-bg); color: var(--gold);
   border: 1px solid rgba(200,137,10,0.3);
-  min-height: 40px; padding: 8px 12px; border-radius: 8px;
-  font-size: 12px; font-weight: 800; cursor: pointer;
+  min-height: 28px; padding: 0 8px; border-radius: 6px;
+  font-size: 11px; font-weight: 800; cursor: pointer;
   display: inline-flex; align-items: center;
 }
+.tag-date-venda:active { background: var(--cream-deep); }
+
 .lancar-body {
   flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
