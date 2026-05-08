@@ -492,18 +492,17 @@ async function importarBackup(e) {
 }
 
 .config-acc-body {
-  max-height: 0;
+  display: grid;
+  grid-template-rows: 0fr;
   overflow: hidden;
   opacity: 0;
-  transition: opacity 0.22s ease;
+  transition: grid-template-rows 0.3s ease, opacity 0.3s ease;
 }
 
 .config-section.aberto .config-acc-body {
-  max-height: 2000px;
+  grid-template-rows: 1fr;
   opacity: 1;
   border-top: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
 }
 
 /* ── Linhas de backup ────────────────────────────────────── */

@@ -1,5 +1,5 @@
 <template>
-  <div class="swipe-wrap" @touchstart="onTouchStart" @touchmove="onTouchMove" @touchend="onTouchEnd">
+  <div class="swipe-wrap" @touchstart="onTouchStart" @touchmove="onTouchMove" @touchend="onTouchEnd" style="touch-action: pan-y;">
     <div class="swipe-front" :class="{ open: isOpen }" @click="handleClick">
       <slot />
       <div class="swipe-hint">
@@ -50,7 +50,9 @@ function onTouchMove(e) {
   const dy = e.touches[0].clientY - startY
   if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 8) {
     isDragging = true
-    e.preventDefault()
+    if (e.cancelable) {
+      e.preventDefault()
+    }
   }
 }
 

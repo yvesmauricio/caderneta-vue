@@ -15,15 +15,12 @@ export async function aplicarBackupDB(dados, { getAll, put, del, appActions }) {
   
   for (const tabela of tabelas) {
     if (Array.isArray(dados[tabela])) {
-      // Opcional: Limpar tabela atual antes
+      // Melhoria: Limpeza em massa antes de repopular
       const atuais = await getAll(tabela);
-      for (const item of atuais) {
-        await del(tabela, item.id);
-      }
-      // Inserir novos
-      for (const item of dados[tabela]) {
-        await put(tabela, item);
-      }
+      await Promise.all(atuais.map(item => del(tabela, item.id)));
+      
+      // Inserção em lote para reduzir o overhead de transações
+      await Promise.all(dados[tabela].map(item => put(tabela, item)));
     }
   }
 }

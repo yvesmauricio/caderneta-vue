@@ -62,10 +62,16 @@
 import { ref, computed } from 'vue'
 import { appStore } from '../stores/appStore.js'
 
+// Caching do formatador para evitar recriação constante em cada renderização/input
+const moneyFormatter = new Intl.NumberFormat('pt-BR', {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+})
+
 const taxas    = computed(() => appStore.taxas)
 const rawInput = ref('')
 
-const fmt = v => Number(v||0).toLocaleString('pt-BR', { minimumFractionDigits:2, maximumFractionDigits:2 })
+const fmt = v => moneyFormatter.format(Number(v || 0))
 
 function taxaStr(t) {
   return String(t).replace('.', ',') + '%'
@@ -111,9 +117,8 @@ function formatarMoeda(e) {
     return;
   }
 
-  // Converte para centavos e formata para o padrão brasileiro
   const valorNum = (Number(v) / 100);
-  rawInput.value = valorNum.toLocaleString("pt-BR", {
+  rawInput.value = moneyFormatter.format(valorNum).toLocaleString("pt-BR", {
     style: "currency",
     currency: "BRL",
   });

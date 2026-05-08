@@ -26,23 +26,29 @@
       </div>
     </div>
 
-    <div class="scroll-list">
+    <div class="scroll-list" ref="scrollContainer" @scroll="handleScroll">
       <div v-if="!filtrados.length" class="empty">
         <div class="empty-ico">👤</div>
         <p>{{ busca ? 'Nenhum cliente encontrado' : 'Nenhuma cliente nesta loja.\nToque em + para adicionar.' }}</p>
       </div>
-      <SwipeItem
-        v-for="c in filtrados" :key="c.id"
-        @click="escolher(c)"
-        @edit="abrirModal(c)"
-        @delete="confirmarExclusao(c)"
-      >
-        <div class="list-icon pessoa">👩</div>
-        <div class="list-info">
-          <div class="list-nome">{{ c.nome }}</div>
-          <div class="list-sub">{{ c.telefone || 'Sem telefone' }}</div>
-        </div>
-      </SwipeItem>
+      
+      <!-- Spacer para simular a altura total da lista e manter o scrollbar correto -->
+      <div :style="{ height: totalHeight + 'px', position: 'relative' }">
+        <SwipeItem
+          ref="itemsRef"
+          v-for="c in visiveis" :key="c.id"
+          :style="{ position: 'absolute', top: c._top + 'px', left: 0, right: 0 }"
+          @click="escolher(c)"
+          @edit="abrirModal(c)"
+          @delete="confirmarExclusao(c)"
+        >
+          <div class="list-icon pessoa">👩</div>
+          <div class="list-info">
+            <div class="list-nome">{{ c.nome }}</div>
+            <div class="list-sub">{{ c.telefone || 'Sem telefone' }}</div>
+          </div>
+        </SwipeItem>
+      </div>
     </div>
 
     <!-- Modal novo/editar cliente -->
@@ -101,12 +107,37 @@ const modal      = ref(null)
 const form       = ref({ nome: '', telefone: '' })
 const editando   = ref(null)
 const paraExcluir = ref(null)
+const scrollTop  = ref(0)
+const ITEM_HEIGHT = 72 // Altura fixa de cada item
+const BUFFER     = 5   // Itens extras para evitar buracos brancos no scroll
+const scrollContainer = ref(null)
+const itemsRef = ref([])
+
+function handleScroll(e) {
+  scrollTop.value = e.target.scrollTop
+
+  // Fecha os menus laterais de todos os itens renderizados ao detectar rolagem
+  // Isso garante que nenhum menu fique "aberto" durante o scroll virtualizado
+  itemsRef.value.forEach(item => item?.close?.())
+}
+
+const totalHeight = computed(() => filtrados.value.length * ITEM_HEIGHT)
 
 const filtrados = computed(() =>
   clientes.value
     .filter(c => !busca.value || c.nome.toLowerCase().includes(busca.value.toLowerCase()))
     .sort((a,b) => a.nome.localeCompare(b.nome))
 )
+
+const visiveis = computed(() => {
+  const start = Math.max(0, Math.floor(scrollTop.value / ITEM_HEIGHT) - BUFFER)
+  const end   = Math.min(filtrados.value.length, start + Math.ceil(800 / ITEM_HEIGHT) + (BUFFER * 2))
+  
+  return filtrados.value.slice(start, end).map((c, i) => ({
+    ...c,
+    _top: (start + i) * ITEM_HEIGHT
+  }))
+})
 
 async function carregar() {
   if (!props.loja) return
